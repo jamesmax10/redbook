@@ -209,4 +209,7 @@ Not:
 
 The product is NOT the report.
 
+Validation principle:
+The system should help the surveyor feel confident that the valuation is complete, consistent, and ready for reporting.
+
 The product IS the comparable analysis workflow that produces the report.
