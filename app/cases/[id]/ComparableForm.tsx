@@ -1,12 +1,18 @@
 "use client";
 
 import { useState } from "react";
-
-const inputClass =
-  "w-full border border-zinc-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:border-transparent";
-
-const inputErrorClass =
-  "w-full border border-red-400 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent";
+import { FACTOR_OPTIONS, type Adjustment } from "@/lib/types";
+import { fmtCurrency } from "@/lib/format";
+import {
+  inputClass,
+  inputErrorClass,
+  btnPrimary,
+  btnDashed,
+  btnRemove,
+  card,
+  labelClass,
+  overline,
+} from "@/lib/styles";
 
 const TRANSACTION_TYPE_OPTIONS = [
   "Sale",
@@ -15,40 +21,16 @@ const TRANSACTION_TYPE_OPTIONS = [
   "Lease Renewal",
 ];
 
-const FACTOR_OPTIONS = [
-  { value: "location", label: "Location" },
-  { value: "condition", label: "Condition" },
-  { value: "size", label: "Size" },
-  { value: "age", label: "Age" },
-  { value: "specification", label: "Specification" },
-  { value: "lease_terms", label: "Lease Terms" },
-  { value: "parking", label: "Parking" },
-  { value: "floor_level", label: "Floor Level" },
-  { value: "market_movement", label: "Market Movement" },
-  { value: "other", label: "Other" },
-];
-
-interface Adjustment {
-  factor: string;
-  percentage: number;
-  rationale: string;
-}
-
 function emptyAdjustment(): Adjustment {
   return { factor: "location", percentage: 0, rationale: "" };
 }
 
-function formatCurrency(value: number): string {
-  return value.toLocaleString("en-IE", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
 export default function ComparableForm({
   action,
+  redirectStep,
 }: {
   action: (formData: FormData) => void;
+  redirectStep?: string;
 }) {
   const [priceOrRent, setPriceOrRent] = useState("");
   const [area, setArea] = useState("");
@@ -58,11 +40,12 @@ export default function ComparableForm({
   const price = parseFloat(priceOrRent);
   const areaVal = parseFloat(area);
   const ratePreview =
-    !isNaN(price) && !isNaN(areaVal) && areaVal > 0
-      ? price / areaVal
-      : null;
+    !isNaN(price) && !isNaN(areaVal) && areaVal > 0 ? price / areaVal : null;
 
-  const totalPct = adjustments.reduce((sum, a) => sum + (a.percentage || 0), 0);
+  const totalPct = adjustments.reduce(
+    (sum, a) => sum + (a.percentage || 0),
+    0
+  );
   const adjustedRatePreview =
     ratePreview !== null && adjustments.length > 0
       ? ratePreview * (1 + totalPct / 100)
@@ -110,17 +93,19 @@ export default function ComparableForm({
     <form
       action={action}
       onSubmit={handleSubmit}
-      className="rounded-lg border border-dashed border-zinc-200 p-5"
+      className="rounded-xl border border-dashed border-zinc-200 p-5"
     >
-      <h3 className="text-sm font-medium text-zinc-500 uppercase tracking-wide mb-3">
-        Add Comparable
-      </h3>
+      {redirectStep && <input type="hidden" name="_step" value={redirectStep} />}
+      <h3 className={`${overline} mb-4`}>Add Comparable</h3>
 
       {errors.length > 0 && (
-        <div className="mb-4 rounded-md bg-red-50 border border-red-200 px-4 py-3">
+        <div className="mb-4 rounded-xl bg-red-50/80 px-4 py-3 ring-1 ring-red-200/60">
           <ul className="space-y-1">
             {errors.map((err) => (
-              <li key={err} className="flex items-center gap-2 text-sm text-red-700">
+              <li
+                key={err}
+                className="flex items-center gap-2 text-sm text-red-700"
+              >
                 <span className="text-red-400">&#10005;</span>
                 {err}
               </li>
@@ -131,10 +116,7 @@ export default function ComparableForm({
 
       <div className="space-y-4">
         <div>
-          <label
-            htmlFor="comp_address"
-            className="block text-sm font-medium text-zinc-700 mb-1"
-          >
+          <label htmlFor="comp_address" className={labelClass}>
             Address
           </label>
           <input
@@ -147,10 +129,7 @@ export default function ComparableForm({
         </div>
 
         <div>
-          <label
-            htmlFor="transaction_type"
-            className="block text-sm font-medium text-zinc-700 mb-1"
-          >
+          <label htmlFor="transaction_type" className={labelClass}>
             Transaction Type
           </label>
           <select
@@ -169,10 +148,7 @@ export default function ComparableForm({
         </div>
 
         <div>
-          <label
-            htmlFor="transaction_date"
-            className="block text-sm font-medium text-zinc-700 mb-1"
-          >
+          <label htmlFor="transaction_date" className={labelClass}>
             Transaction Date
           </label>
           <input
@@ -185,10 +161,7 @@ export default function ComparableForm({
         </div>
 
         <div>
-          <label
-            htmlFor="price_or_rent"
-            className="block text-sm font-medium text-zinc-700 mb-1"
-          >
+          <label htmlFor="price_or_rent" className={labelClass}>
             Price / Rent (&euro;)
           </label>
           <input
@@ -208,10 +181,7 @@ export default function ComparableForm({
         </div>
 
         <div>
-          <label
-            htmlFor="comp_gross_internal_area"
-            className="block text-sm font-medium text-zinc-700 mb-1"
-          >
+          <label htmlFor="comp_gross_internal_area" className={labelClass}>
             Gross Internal Area (sq m)
           </label>
           <input
@@ -231,11 +201,11 @@ export default function ComparableForm({
         </div>
 
         {ratePreview !== null && (
-          <div className="bg-zinc-50 border border-zinc-200 rounded-md px-3 py-2">
-            <span className="text-sm text-zinc-600">
+          <div className="bg-zinc-50 rounded-lg px-3.5 py-2.5">
+            <span className="text-sm text-zinc-500">
               Raw rate:{" "}
               <span className="font-semibold text-zinc-900">
-                &euro;{formatCurrency(ratePreview)}/sq m
+                &euro;{fmtCurrency(ratePreview)}/sq m
               </span>
             </span>
           </div>
@@ -244,10 +214,8 @@ export default function ComparableForm({
         {/* Inline Adjustments */}
         <div className="border-t border-zinc-100 pt-4 mt-2">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-medium text-zinc-500 uppercase tracking-wide">
-              Adjustments
-            </h4>
-            <span className="text-xs text-zinc-400">Optional</span>
+            <h4 className={overline}>Adjustments</h4>
+            <span className="text-xs text-zinc-300">Optional</span>
           </div>
 
           {adjustments.length > 0 && (
@@ -299,7 +267,7 @@ export default function ComparableForm({
                   <button
                     type="button"
                     onClick={() => removeAdjustment(i)}
-                    className="text-zinc-400 hover:text-red-600 text-lg leading-none pt-2"
+                    className={btnRemove}
                     title="Remove"
                   >
                     &times;
@@ -314,19 +282,21 @@ export default function ComparableForm({
             onClick={() =>
               setAdjustments([...adjustments, emptyAdjustment()])
             }
-            className="text-xs text-zinc-600 hover:text-zinc-900 border border-dashed border-zinc-300 rounded-md px-3 py-1.5 w-full"
+            className={btnDashed}
           >
             + Add adjustment
           </button>
 
           {adjustments.length > 0 && ratePreview !== null && (
-            <div className="mt-3 text-sm bg-white border border-zinc-200 rounded-md px-3 py-2 flex justify-between items-center">
-              <span className="text-zinc-600">
+            <div
+              className={`mt-3 text-sm ${card} px-3.5 py-2.5 flex justify-between items-center`}
+            >
+              <span className="text-zinc-500">
                 Total: {totalPct >= 0 ? "+" : ""}
                 {totalPct.toFixed(1)}%
               </span>
-              <span className="font-semibold text-zinc-900">
-                Adjusted: &euro;{formatCurrency(adjustedRatePreview!)}/sq m
+              <span className="font-semibold text-zinc-900 tabular-nums">
+                Adjusted: &euro;{fmtCurrency(adjustedRatePreview!)}/sq m
               </span>
             </div>
           )}
@@ -338,11 +308,8 @@ export default function ComparableForm({
           value={JSON.stringify(adjustments)}
         />
 
-        <div className="pt-1">
-          <button
-            type="submit"
-            className="bg-zinc-900 text-white px-4 py-2 rounded-md text-sm hover:bg-zinc-700"
-          >
+        <div className="pt-2">
+          <button type="submit" className={btnPrimary}>
             Add Comparable
           </button>
         </div>

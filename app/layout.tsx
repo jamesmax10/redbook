@@ -26,31 +26,34 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col bg-zinc-50 font-[family-name:var(--font-geist-sans)]">
-        <header className="bg-white border-b border-zinc-200">
-          <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-            <Link href="/" className="text-xl font-bold text-zinc-900">
+      <body className="min-h-full flex flex-col bg-[var(--background)] font-[family-name:var(--font-geist-sans)] text-[15px] leading-relaxed antialiased">
+        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-sm border-b border-zinc-100">
+          <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+            <Link
+              href="/"
+              className="text-[15px] font-semibold tracking-tight text-zinc-900"
+            >
               RedBook Pro
             </Link>
-            <nav className="flex gap-4">
+            <nav className="flex items-center gap-1">
               <Link
                 href="/"
-                className="text-sm text-zinc-600 hover:text-zinc-900"
+                className="text-sm text-zinc-500 hover:text-zinc-900 px-3 py-1.5 rounded-md transition-colors"
               >
                 Dashboard
               </Link>
               <Link
                 href="/cases/new"
-                className="text-sm bg-zinc-900 text-white px-3 py-1.5 rounded-md hover:bg-zinc-700"
+                className="text-sm font-medium bg-zinc-900 text-white px-3.5 py-1.5 rounded-lg transition-colors hover:bg-zinc-800"
               >
                 New Case
               </Link>
             </nav>
           </div>
         </header>
-        <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-8">
+        <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-10">
           {children}
         </main>
       </body>

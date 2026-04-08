@@ -2,17 +2,33 @@
 
 import { supabase } from "@/lib/supabase";
 import { redirect } from "next/navigation";
+import type { Adjustment } from "@/lib/types";
+
+function requireField(formData: FormData, name: string, label: string): string {
+  const value = (formData.get(name) as string | null)?.trim() ?? "";
+  if (!value) throw new Error(`${label} is required.`);
+  return value;
+}
+
+function caseUrl(caseId: string, formData?: FormData, extra?: Record<string, string>): string {
+  const params = new URLSearchParams();
+  const step = formData?.get("_step") as string | null;
+  if (step) params.set("step", step);
+  if (extra) Object.entries(extra).forEach(([k, v]) => params.set(k, v));
+  const qs = params.toString();
+  return `/cases/${caseId}${qs ? `?${qs}` : ""}`;
+}
 
 export async function createCase(formData: FormData) {
+  const client_name = requireField(formData, "client_name", "Client name");
+  const property_address = requireField(formData, "property_address", "Property address");
+  const valuation_date = requireField(formData, "valuation_date", "Valuation date");
+  const purpose = requireField(formData, "purpose", "Purpose");
+  const basis_of_value = requireField(formData, "basis_of_value", "Basis of value");
+
   const { data, error } = await supabase
     .from("cases")
-    .insert({
-      client_name: formData.get("client_name") as string,
-      property_address: formData.get("property_address") as string,
-      valuation_date: formData.get("valuation_date") as string,
-      purpose: formData.get("purpose") as string,
-      basis_of_value: formData.get("basis_of_value") as string,
-    })
+    .insert({ client_name, property_address, valuation_date, purpose, basis_of_value })
     .select()
     .single();
 
@@ -20,26 +36,26 @@ export async function createCase(formData: FormData) {
     throw new Error(error.message);
   }
 
-  redirect(`/cases/${data.id}`);
+  redirect(`/cases/${data.id}?step=1`);
 }
 
 export async function updateCase(caseId: string, formData: FormData) {
+  const client_name = requireField(formData, "client_name", "Client name");
+  const property_address = requireField(formData, "property_address", "Property address");
+  const valuation_date = requireField(formData, "valuation_date", "Valuation date");
+  const purpose = requireField(formData, "purpose", "Purpose");
+  const basis_of_value = requireField(formData, "basis_of_value", "Basis of value");
+
   const { error } = await supabase
     .from("cases")
-    .update({
-      client_name: formData.get("client_name") as string,
-      property_address: formData.get("property_address") as string,
-      valuation_date: formData.get("valuation_date") as string,
-      purpose: formData.get("purpose") as string,
-      basis_of_value: formData.get("basis_of_value") as string,
-    })
+    .update({ client_name, property_address, valuation_date, purpose, basis_of_value })
     .eq("id", caseId);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  redirect(`/cases/${caseId}`);
+  redirect(caseUrl(caseId, formData));
 }
 
 export async function saveProperty(
@@ -47,13 +63,19 @@ export async function saveProperty(
   propertyId: string | null,
   formData: FormData
 ) {
+  const grossInternalArea = parseFloat(
+    formData.get("gross_internal_area") as string
+  );
+
+  if (isNaN(grossInternalArea) || grossInternalArea <= 0) {
+    throw new Error("Gross Internal Area must be greater than 0.");
+  }
+
   const row = {
     case_id: caseId,
     address: formData.get("address") as string,
     property_type: formData.get("property_type") as string,
-    gross_internal_area: parseFloat(
-      formData.get("gross_internal_area") as string
-    ),
+    gross_internal_area: grossInternalArea,
     condition: formData.get("condition") as string,
     tenure: formData.get("tenure") as string,
   };
@@ -69,7 +91,7 @@ export async function saveProperty(
     if (error) throw new Error(error.message);
   }
 
-  redirect(`/cases/${caseId}`);
+  redirect(caseUrl(caseId, formData));
 }
 
 export async function addComparable(caseId: string, formData: FormData) {
@@ -116,19 +138,30 @@ export async function addComparable(caseId: string, formData: FormData) {
     throw new Error(error.message);
   }
 
-  redirect(`/cases/${caseId}`);
+  redirect(caseUrl(caseId, formData));
 }
 
-export interface Adjustment {
-  factor: string;
-  percentage: number;
-  rationale: string;
+export type { Adjustment } from "@/lib/types";
+
+export async function deleteComparable(comparableId: string, caseId: string, redirectStep?: string) {
+  const { error } = await supabase
+    .from("comparables")
+    .delete()
+    .eq("id", comparableId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const step = redirectStep ? `?step=${redirectStep}` : "";
+  redirect(`/cases/${caseId}${step}`);
 }
 
 export async function saveAdjustments(
   comparableId: string,
   caseId: string,
-  adjustments: Adjustment[]
+  adjustments: Adjustment[],
+  redirectStep?: string
 ) {
   const { data: comp, error: fetchError } = await supabase
     .from("comparables")
@@ -155,7 +188,8 @@ export async function saveAdjustments(
     throw new Error(error.message);
   }
 
-  redirect(`/cases/${caseId}`);
+  const step = redirectStep ? `?step=${redirectStep}` : "";
+  redirect(`/cases/${caseId}${step}`);
 }
 
 export async function saveValuation(
@@ -167,6 +201,12 @@ export async function saveValuation(
     (formData.get("adopted_rate_per_sqm") as string)?.trim() || null;
   const adopted_rate_rationale =
     (formData.get("adopted_rate_rationale") as string)?.trim() || null;
+  const assumptions =
+    (formData.get("assumptions") as string)?.trim() || null;
+  const limiting_conditions =
+    (formData.get("limiting_conditions") as string)?.trim() || null;
+  const valuer_name =
+    (formData.get("valuer_name") as string)?.trim() || null;
 
   const row = {
     case_id: caseId,
@@ -174,6 +214,9 @@ export async function saveValuation(
       ? parseFloat(adopted_rate_per_sqm)
       : null,
     adopted_rate_rationale,
+    assumptions,
+    limiting_conditions,
+    valuer_name,
   };
 
   if (valuationId) {
@@ -187,5 +230,5 @@ export async function saveValuation(
     if (error) throw new Error(error.message);
   }
 
-  redirect(`/cases/${caseId}`);
+  redirect(caseUrl(caseId, formData, { saved: "valuation" }));
 }

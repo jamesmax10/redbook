@@ -26,6 +26,9 @@ export function runValidation(
   valuation: {
     adopted_rate_per_sqm: number | null;
     adopted_rate_rationale: string | null;
+    assumptions: string | null;
+    limiting_conditions: string | null;
+    valuer_name: string | null;
   } | null
 ): ValidationResult {
   const checks: ValidationCheck[] = [];
@@ -112,6 +115,48 @@ export function runValidation(
           section: "valuation",
           severity: "error",
           message: "Adopted rate rationale is missing",
+        }
+  );
+
+  checks.push(
+    valuation?.assumptions
+      ? {
+          section: "valuation",
+          severity: "pass",
+          message: "Assumptions provided",
+        }
+      : {
+          section: "valuation",
+          severity: "warning",
+          message: "Assumptions not provided",
+        }
+  );
+
+  checks.push(
+    valuation?.limiting_conditions
+      ? {
+          section: "valuation",
+          severity: "pass",
+          message: "Limiting conditions provided",
+        }
+      : {
+          section: "valuation",
+          severity: "warning",
+          message: "Limiting conditions not provided",
+        }
+  );
+
+  checks.push(
+    valuation?.valuer_name
+      ? {
+          section: "valuation",
+          severity: "pass",
+          message: "Valuer name provided",
+        }
+      : {
+          section: "valuation",
+          severity: "warning",
+          message: "Valuer name not provided",
         }
   );
 
