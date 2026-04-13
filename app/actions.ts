@@ -2,6 +2,7 @@
 
 import { supabase } from "@/lib/supabase";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import type { Adjustment } from "@/lib/types";
 
 function requireField(formData: FormData, name: string, label: string): string {
@@ -110,7 +111,7 @@ export async function addComparable(caseId: string, formData: FormData) {
   const ratePerSqm = priceOrRent / grossInternalArea;
 
   let adjustments: Adjustment[] | null = null;
-  let adjustedRatePerSqm: number | null = null;
+  let adjustedRatePerSqm: number = ratePerSqm;
 
   const adjustmentsRaw = formData.get("adjustments_json") as string | null;
   if (adjustmentsRaw) {
@@ -143,6 +144,67 @@ export async function addComparable(caseId: string, formData: FormData) {
 
 export type { Adjustment } from "@/lib/types";
 
+export async function updateComparable(
+  comparableId: string,
+  caseId: string,
+  formData: FormData
+): Promise<{ success: true } | { success: false; error: string }> {
+  const address = (formData.get("address") as string)?.trim();
+  if (!address) return { success: false, error: "Address is required." };
+
+  const transactionType = (formData.get("transaction_type") as string)?.trim();
+  if (!transactionType) return { success: false, error: "Transaction type is required." };
+
+  const transactionDate = (formData.get("transaction_date") as string)?.trim();
+  if (!transactionDate) return { success: false, error: "Transaction date is required." };
+
+  const priceOrRent = parseFloat(formData.get("price_or_rent") as string);
+  const grossInternalArea = parseFloat(formData.get("gross_internal_area") as string);
+
+  if (isNaN(priceOrRent) || priceOrRent <= 0) {
+    return { success: false, error: "Price / Rent must be greater than 0." };
+  }
+  if (isNaN(grossInternalArea) || grossInternalArea <= 0) {
+    return { success: false, error: "Gross Internal Area must be greater than 0." };
+  }
+
+  const ratePerSqm = priceOrRent / grossInternalArea;
+
+  let adjustments: Adjustment[] | null = null;
+  let adjustedRatePerSqm: number = ratePerSqm;
+
+  const adjustmentsRaw = formData.get("adjustments_json") as string | null;
+  if (adjustmentsRaw) {
+    const parsed: Adjustment[] = JSON.parse(adjustmentsRaw);
+    if (parsed.length > 0) {
+      adjustments = parsed;
+      const totalPct = parsed.reduce((sum, a) => sum + a.percentage, 0);
+      adjustedRatePerSqm = ratePerSqm * (1 + totalPct / 100);
+    }
+  }
+
+  const { error } = await supabase
+    .from("comparables")
+    .update({
+      address,
+      transaction_type: transactionType,
+      transaction_date: transactionDate,
+      price_or_rent: priceOrRent,
+      gross_internal_area: grossInternalArea,
+      rate_per_sqm: ratePerSqm,
+      adjustments,
+      adjusted_rate_per_sqm: adjustedRatePerSqm,
+    })
+    .eq("id", comparableId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath(`/cases/${caseId}`);
+  return { success: true };
+}
+
 export async function deleteComparable(comparableId: string, caseId: string, redirectStep?: string) {
   const { error } = await supabase
     .from("comparables")
@@ -173,14 +235,15 @@ export async function saveAdjustments(
     throw new Error("Comparable not found.");
   }
 
+  const ratePerSqm = Number(comp.rate_per_sqm);
   const totalPct = adjustments.reduce((sum, a) => sum + a.percentage, 0);
-  const adjustedRate = Number(comp.rate_per_sqm) * (1 + totalPct / 100);
+  const adjustedRate = ratePerSqm * (1 + totalPct / 100);
 
   const { error } = await supabase
     .from("comparables")
     .update({
       adjustments: adjustments.length > 0 ? adjustments : null,
-      adjusted_rate_per_sqm: adjustments.length > 0 ? adjustedRate : null,
+      adjusted_rate_per_sqm: adjustments.length > 0 ? adjustedRate : ratePerSqm,
     })
     .eq("id", comparableId);
 

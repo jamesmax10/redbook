@@ -195,7 +195,7 @@ function buildComparablesTable(comparables: Comparable[]): Table {
           dataCell(Number(c.gross_internal_area).toLocaleString("en-IE"), COL_AREA, AlignmentType.RIGHT),
           dataCell(`€${fmtCurrency(Number(c.rate_per_sqm))}`, COL_RATE, AlignmentType.RIGHT),
           dataCell(
-            c.adjusted_rate_per_sqm != null ? `€${fmtCurrency(c.adjusted_rate_per_sqm)}` : "—",
+            `€${fmtCurrency(c.adjusted_rate_per_sqm ?? Number(c.rate_per_sqm))}`,
             COL_ADJ_RATE,
             AlignmentType.RIGHT,
           ),
@@ -212,11 +212,11 @@ function buildComparablesTable(comparables: Comparable[]): Table {
 }
 
 function comparablesSummary(comparables: Comparable[]): Paragraph | null {
-  const rates = comparables
-    .map((c) => c.adjusted_rate_per_sqm)
-    .filter((v): v is number => v != null);
+  if (comparables.length === 0) return null;
 
-  if (rates.length === 0) return null;
+  const rates = comparables.map(
+    (c) => c.adjusted_rate_per_sqm ?? Number(c.rate_per_sqm)
+  );
 
   const min = Math.min(...rates);
   const max = Math.max(...rates);

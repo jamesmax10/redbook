@@ -19,6 +19,7 @@ import {
 } from "@/lib/caseStatus";
 import ComparableForm from "./ComparableForm";
 import ComparableRow from "./ComparableRow";
+import ComparableStepNav from "./ComparableStepNav";
 import ValuationSection from "./ValuationSection";
 import {
   runValidation,
@@ -243,21 +244,20 @@ export default async function CaseDetailPage({
 
   // ── Derived state ───────────────────────────────────────────
 
-  const adjustedRates = (comparables ?? [])
-    .map(
-      (c: { adjusted_rate_per_sqm: number | null }) => c.adjusted_rate_per_sqm
-    )
-    .filter((v): v is number => v != null);
+  const effectiveRates = (comparables ?? []).map(
+    (c: { adjusted_rate_per_sqm: number | null; rate_per_sqm: number }) =>
+      c.adjusted_rate_per_sqm ?? Number(c.rate_per_sqm)
+  );
 
   const summaryMetrics =
-    adjustedRates.length > 0
+    effectiveRates.length > 0
       ? {
-          count: adjustedRates.length,
-          min: Math.min(...adjustedRates),
-          max: Math.max(...adjustedRates),
+          count: effectiveRates.length,
+          min: Math.min(...effectiveRates),
+          max: Math.max(...effectiveRates),
           average:
-            adjustedRates.reduce((a: number, b: number) => a + b, 0) /
-            adjustedRates.length,
+            effectiveRates.reduce((a: number, b: number) => a + b, 0) /
+            effectiveRates.length,
         }
       : null;
 
@@ -573,13 +573,21 @@ export default async function CaseDetailPage({
             Comparables
           </h2>
           <p className="text-sm text-zinc-400 mb-6">
-            Add comparable transactions to support your valuation. At least 2
-            recommended.
+            {(comparables?.length ?? 0) >= 2
+              ? "\u2713 Minimum comparables met."
+              : (comparables?.length ?? 0) === 1
+                ? "1 comparable added \u2014 1 more required."
+                : "Add at least 2 comparables to proceed."}
           </p>
 
           <ComparableForm
             action={addComparableForCase}
             redirectStep="3"
+            existingComparables={(comparables ?? []).map((c: { address: string; price_or_rent: number; gross_internal_area: number }) => ({
+              address: c.address,
+              price_or_rent: c.price_or_rent,
+              gross_internal_area: c.gross_internal_area,
+            }))}
           />
 
           <div className="mt-8">
@@ -649,11 +657,9 @@ export default async function CaseDetailPage({
             )}
           </div>
 
-          <StepNav
+          <ComparableStepNav
             caseId={id}
-            currentStep={3}
-            nextLabel="Continue to Valuation"
-            nextHref={`/cases/${id}?step=4`}
+            comparableCount={comparables?.length ?? 0}
           />
         </section>
       )}

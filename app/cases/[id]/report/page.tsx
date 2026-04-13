@@ -86,13 +86,7 @@ export default async function ReportPage({
 
   if (valError) throw valError;
 
-  const adjustedRates = (comparables ?? [])
-    .map(
-      (c: { adjusted_rate_per_sqm: number | null }) => c.adjusted_rate_per_sqm
-    )
-    .filter((v): v is number => v != null);
-
-  const comparableCount = adjustedRates.length;
+  const comparableCount = comparables?.length ?? 0;
 
   return (
     <div>
@@ -239,22 +233,19 @@ export default async function ReportPage({
                             <td
                               className={`${tdBase} text-right font-medium text-zinc-900 tabular-nums`}
                             >
-                              {comp.adjusted_rate_per_sqm != null ? (
-                                <>
-                                  &euro;
-                                  {fmtCurrency(comp.adjusted_rate_per_sqm)}
-                                  {adjTotal !== 0 && (
-                                    <span
-                                      className={`ml-1.5 text-xs ${adjTotal > 0 ? "text-emerald-600" : "text-red-500"}`}
-                                    >
-                                      {adjTotal > 0 ? "+" : ""}
-                                      {adjTotal.toFixed(1)}%
-                                    </span>
-                                  )}
-                                </>
-                              ) : (
-                                <span className="text-zinc-300">
-                                  &mdash;
+                              &euro;
+                              {fmtCurrency(comp.adjusted_rate_per_sqm ?? Number(comp.rate_per_sqm))}
+                              {adjTotal !== 0 && (
+                                <span
+                                  className={`ml-1.5 text-xs ${adjTotal > 0 ? "text-emerald-600" : "text-red-500"}`}
+                                >
+                                  {adjTotal > 0 ? "+" : ""}
+                                  {adjTotal.toFixed(1)}%
+                                </span>
+                              )}
+                              {!comp.adjustments && (
+                                <span className="ml-1.5 text-xs text-zinc-400">
+                                  (unadjusted)
                                 </span>
                               )}
                             </td>

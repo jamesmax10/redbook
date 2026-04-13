@@ -82,7 +82,7 @@ export function runValidation(
     checks.push({
       section: "comparables",
       severity: "warning",
-      message: "Only 1 comparable (minimum 2 recommended)",
+      message: "Only 1 comparable added — minimum 2 required",
     });
   } else {
     checks.push({

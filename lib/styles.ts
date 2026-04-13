@@ -12,6 +12,9 @@ export const inputClass =
 export const inputErrorClass =
   "w-full rounded-lg border border-red-300 px-3 py-2 text-sm text-zinc-900 transition-colors placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-red-500/10 focus:border-red-400";
 
+export const inputFilledClass =
+  "w-full rounded-lg border border-emerald-300 bg-emerald-50/30 px-3 py-2 text-sm text-zinc-900 transition-colors placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-400";
+
 // ---------------------------------------------------------------------------
 // Buttons
 // ---------------------------------------------------------------------------

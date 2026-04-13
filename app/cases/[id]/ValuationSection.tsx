@@ -75,7 +75,7 @@ export default function ValuationSection({
           </div>
         ) : (
           <p className="text-sm text-zinc-400">
-            Add comparables with adjustments to see insights.
+            Add comparables to see insights.
           </p>
         )}
       </div>
