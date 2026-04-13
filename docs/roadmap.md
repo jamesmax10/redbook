@@ -16,6 +16,22 @@ This is a structured, professional system for valuation workflows.
 
 ---
 
+## 🔥 Critical Product Insight
+
+The bottleneck in valuation workflows is NOT report generation.
+
+It is:
+
+> finding and capturing comparable evidence
+
+The product must prioritise:
+
+- reducing friction in comparable capture
+- integrating with real-world workflows (e.g. Daft browsing)
+- minimising manual data entry
+
+---
+
 ## 2. Core Product Concept
 
 The product has three layers:
@@ -34,7 +50,6 @@ The product has three layers:
 
 ### Layer 3 — Output & Workflow
 - Report generation
-- Section editing
 - Validation
 - Export
 
@@ -42,108 +57,106 @@ The product has three layers:
 
 ## 3. Current Phase
 
-### Phase 0 — Foundation
-
-Goal:
-Create a working system to manage valuation cases and subject property data.
+### Phase — Core Workflow (COMPLETED)
 
 Completed:
-- Case creation
-- Case list (dashboard)
-- Case detail page
-- Navigation between screens
+- Case creation & management
+- Subject property input
+- Comparable input & analysis
+- Adjustment system
+- Valuation calculation
+- Validation system
+- Report generation
+- DOCX export
+- Step-based workflow (UX)
 
-In progress:
-- Edit case
-- Subject property form (create + edit)
+Status:
 
-Definition of done:
-- Create case
-- Edit case
-- Add/edit subject property
-- Data persists correctly in Supabase
+> Core valuation workflow is fully functional end-to-end
 
 ---
 
-## 4. Next Phase
+## 4. Current Focus (Right Now)
 
-### Phase 1 — Comparable Engine (CORE PRODUCT)
+You are here:
+
+→ Core workflow complete  
+→ Moving into usability + product validation phase  
+
+### Priority areas:
+
+1. Comparable capture (critical gap)
+2. Workflow UX refinement
+3. Reliability & consistency
+4. Real user validation
+
+---
+
+## 5. Next Phase
+
+### Phase — Comparable Capture (CORE NEXT STEP)
 
 Goal:
-Build the comparable analysis workflow (this is the product).
+Reduce friction in adding comparable evidence.
 
 Features:
-- Add comparable
-- Comparable grid (table)
-- Auto calculation:
-  - €/sqm
-  - €/sqft
-- Adjustment system:
-  - factor
-  - percentage
-  - rationale
-- Real-time recalculation
-- Adjusted rate per comparable
-- Include/exclude comparables
-- Summary:
-  - range
-  - average
-  - adopted rate
+- Paste listing → auto-fill comparable fields
+- Basic parsing (address, price, area, type)
+- Editable before saving
 
 Success criteria:
-- Surveyor can analyse 4–5 comparables easily
-- Adjustments feel intuitive
-- Output is clearer than Excel
+- User can add comparables significantly faster than manual entry
+- Reduced need to switch between tools (e.g. Daft)
 
 ---
 
-## 5. Future Phases
+## 6. Future Phases
 
-### Phase 2 — Report Generation
+### Phase — Workflow Refinement
 
-- Report page
-- Section structure:
-  - Cover page
-  - Terms of engagement
-  - Property description
-  - Market commentary
-  - Comparable evidence
-  - Valuation
-  - Assumptions
-  - Compliance
-- Combine:
-  - structured data
-  - templates
-  - generated text
+- Improve step-based UX
+- Reduce cognitive load
+- Improve navigation and feedback
+- Improve dashboard usability
 
 ---
 
-### Phase 3 — Validation & Export
+### Phase — Intelligence Layer (Agent-Ready)
 
-- Validation checks:
-  - missing data
-  - missing sections
-  - inconsistent values
-- DOCX export
-- Formatting and structure
-- Versioning
+Goal:
+Enhance workflow with AI-assisted capabilities.
 
----
+Focus:
+- Comparable extraction (paste → structured data)
+- Rationale drafting assistance
+- Validation insights
+- Pattern recognition across cases
 
-### Phase 4 — Intelligence Layer
+Principle:
 
-- Comparable reuse across cases
-- Historical case database
-- Stored assumptions
-- Pattern recognition
-- Optional AI assistance
+> AI assists the workflow, it does not replace it
 
 ---
 
-## 6. What We Are NOT Building Yet
+## 7. Agent-Readiness Principles
+
+The system must remain fully usable without AI.
+
+Future AI capabilities should be embedded into the workflow.
+
+Rules:
+- structured data over free text
+- shared logic for calculations and validation
+- clear workflow steps
+- no duplicated business logic
+- report sections remain modular
+
+---
+
+## 8. What We Are NOT Building Yet
 
 - Document parsing (PDF, leases)
-- Complex AI extraction
+- Complex AI agents
 - Multi-user collaboration
 - Advanced permissions
 - Custom templates
@@ -151,22 +164,23 @@ Success criteria:
 - Over-engineered validation systems
 
 Rule:
-If it does not directly improve the valuation workflow, it is postponed.
+
+> If it does not directly improve the valuation workflow, it is postponed.
 
 ---
 
-## 7. Daily Build Rule
+## 9. Daily Build Rule
 
 Every feature must answer:
 
-> Does this move us closer to the Red Book valuation workflow system?
+> Does this reduce friction in the valuation workflow?
 
 If yes → build  
 If no → defer  
 
 ---
 
-## 8. Build Philosophy
+## 10. Build Philosophy
 
 - Keep it simple
 - Build one feature at a time
@@ -176,23 +190,7 @@ If no → defer
 
 ---
 
-## 9. Current Focus (Right Now)
-
-You are here:
-
-→ Phase 0 finishing
-
-Next steps:
-1. Add edit case
-2. Complete subject property form
-3. Confirm full data flow works
-
-Then:
-→ Move immediately to Comparable Engine
-
----
-
-## 10. Product Definition
+## 11. Product Definition
 
 RedBook Pro is:
 
@@ -209,7 +207,6 @@ Not:
 
 The product is NOT the report.
 
-Validation principle:
-The system should help the surveyor feel confident that the valuation is complete, consistent, and ready for reporting.
+The product IS:
 
-The product IS the comparable analysis workflow that produces the report.
+> the workflow that produces a confident, defensible valuation
