@@ -174,6 +174,9 @@ export default async function ReportPage({
                       <th className={`text-left px-5 py-3 ${thClass}`}>
                         Address
                       </th>
+                      <th className={`text-left px-5 py-3 ${thClass}`}>
+                        Type
+                      </th>
                       <th className={`text-right px-5 py-3 ${thClass}`}>
                         Price / Rent
                       </th>
@@ -193,6 +196,7 @@ export default async function ReportPage({
                       (comp: {
                         id: string;
                         address: string;
+                        transaction_type: string;
                         price_or_rent: number;
                         gross_internal_area: number;
                         rate_per_sqm: number;
@@ -211,6 +215,9 @@ export default async function ReportPage({
                           <tr key={comp.id} className={trHover}>
                             <td className={`${tdBase} text-zinc-900`}>
                               {comp.address}
+                            </td>
+                            <td className={`${tdBase} text-zinc-600`}>
+                              {comp.transaction_type}
                             </td>
                             <td
                               className={`${tdBase} text-right text-zinc-600 tabular-nums`}
@@ -256,6 +263,62 @@ export default async function ReportPage({
                   </tbody>
                 </table>
               </div>
+              {comparables.some(
+                (c: { adjustments: Adjustment[] | null }) =>
+                  c.adjustments && c.adjustments.length > 0
+              ) && (
+                <div className="px-5 py-4 border-t border-zinc-100">
+                  <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">
+                    Adjustment Rationale
+                  </p>
+                  {comparables
+                    .filter(
+                      (c: { adjustments: Adjustment[] | null }) =>
+                        c.adjustments && c.adjustments.length > 0
+                    )
+                    .map(
+                      (c: {
+                        id: string;
+                        address: string;
+                        adjustments: Adjustment[];
+                      }) => (
+                        <div key={c.id} className="mb-3 last:mb-0">
+                          <p className="text-sm font-medium text-zinc-800">
+                            {c.address}
+                          </p>
+                          <ul className="mt-1 space-y-0.5">
+                            {c.adjustments.map(
+                              (adj: Adjustment, i: number) => (
+                                <li
+                                  key={i}
+                                  className="text-xs text-zinc-500"
+                                >
+                                  {adj.factor.charAt(0).toUpperCase() +
+                                    adj.factor.slice(1)}{" "}
+                                  <span
+                                    className={
+                                      adj.percentage >= 0
+                                        ? "text-emerald-600"
+                                        : "text-red-500"
+                                    }
+                                  >
+                                    {adj.percentage >= 0 ? "+" : ""}
+                                    {adj.percentage}%
+                                  </span>
+                                  {adj.rationale?.trim() && (
+                                    <span className="text-zinc-400">
+                                      : {adj.rationale.trim()}
+                                    </span>
+                                  )}
+                                </li>
+                              )
+                            )}
+                          </ul>
+                        </div>
+                      )
+                    )}
+                </div>
+              )}
             </div>
           ) : (
             <EmptyState message="No comparable evidence recorded for this case." />

@@ -52,7 +52,7 @@ export default function ComparableRow({ comp, caseId, redirectStep }: Props) {
   );
   const [isPending, startTransition] = useTransition();
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const successTimer = useRef<ReturnType<typeof setTimeout>>();
+  const successTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const [editAddress, setEditAddress] = useState(comp.address);
   const [editTransactionType, setEditTransactionType] = useState(comp.transaction_type);

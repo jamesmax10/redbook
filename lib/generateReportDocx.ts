@@ -18,6 +18,7 @@ import type { Adjustment } from "./types";
 
 interface Comparable {
   address: string;
+  transaction_type: string;
   price_or_rent: number;
   gross_internal_area: number;
   rate_per_sqm: number;
@@ -121,11 +122,12 @@ function emptyLine() {
 // Page is A4 (11906 twips wide) with 1.15" margins each side (1656 twips).
 // Available width: 11906 − 2 × 1656 = 8594 twips.
 // Column widths in twips, summing to 8594:
-const COL_ADDRESS = 2900;
-const COL_PRICE = 1500;
-const COL_AREA = 1200;
-const COL_RATE = 1400;
-const COL_ADJ_RATE = 1594;
+const COL_ADDRESS = 2500;
+const COL_TYPE = 900;
+const COL_PRICE = 1400;
+const COL_AREA = 1100;
+const COL_RATE = 1300;
+const COL_ADJ_RATE = 1394;
 
 const HEADER_SHADING = { type: ShadingType.SOLID, color: "F3F4F6" } as const;
 const THIN_BORDER = { style: BorderStyle.SINGLE, size: 1, color: "D1D5DB" };
@@ -179,6 +181,7 @@ function buildComparablesTable(comparables: Comparable[]): Table {
     tableHeader: true,
     children: [
       headerCell("Address", COL_ADDRESS),
+      headerCell("Type", COL_TYPE),
       headerCell("Price", COL_PRICE),
       headerCell("Area", COL_AREA),
       headerCell("€/sq m", COL_RATE),
@@ -191,6 +194,7 @@ function buildComparablesTable(comparables: Comparable[]): Table {
       new TableRow({
         children: [
           dataCell(c.address, COL_ADDRESS),
+          dataCell(c.transaction_type, COL_TYPE),
           dataCell(`€${fmtCurrency(c.price_or_rent)}`, COL_PRICE, AlignmentType.RIGHT),
           dataCell(Number(c.gross_internal_area).toLocaleString("en-IE"), COL_AREA, AlignmentType.RIGHT),
           dataCell(`€${fmtCurrency(Number(c.rate_per_sqm))}`, COL_RATE, AlignmentType.RIGHT),
@@ -206,9 +210,48 @@ function buildComparablesTable(comparables: Comparable[]): Table {
   return new Table({
     layout: TableLayoutType.FIXED,
     width: { size: 8594, type: WidthType.DXA },
-    columnWidths: [COL_ADDRESS, COL_PRICE, COL_AREA, COL_RATE, COL_ADJ_RATE],
+    columnWidths: [COL_ADDRESS, COL_TYPE, COL_PRICE, COL_AREA, COL_RATE, COL_ADJ_RATE],
     rows: [headerRow, ...dataRows],
   });
+}
+
+function buildAdjustmentRationale(comparables: Comparable[]): Paragraph[] {
+  const paragraphs: Paragraph[] = [];
+  const adjusted = comparables.filter((c) => c.adjustments && c.adjustments.length > 0);
+  if (adjusted.length === 0) return paragraphs;
+
+  paragraphs.push(
+    new Paragraph({
+      spacing: { before: 300, after: 160 },
+      children: [
+        new TextRun({ text: "Adjustment Rationale", bold: true, size: BODY_SIZE, font: FONT, color: "374151" }),
+      ],
+    }),
+  );
+
+  for (const c of adjusted) {
+    const lines: TextRun[] = [
+      new TextRun({ text: c.address, bold: true, size: BODY_SIZE, font: FONT }),
+      new TextRun({ text: "", break: 1 }),
+    ];
+    for (const adj of c.adjustments!) {
+      const sign = adj.percentage >= 0 ? "+" : "";
+      const label = adj.factor.charAt(0).toUpperCase() + adj.factor.slice(1);
+      const rationale = adj.rationale?.trim() ? `: ${adj.rationale.trim()}` : "";
+      lines.push(
+        new TextRun({
+          text: `  ${label} ${sign}${adj.percentage}%${rationale}`,
+          size: SMALL_SIZE,
+          font: FONT,
+          color: "6B7280",
+        }),
+        new TextRun({ text: "", break: 1 }),
+      );
+    }
+    paragraphs.push(new Paragraph({ spacing: { after: 120 }, children: lines }));
+  }
+
+  return paragraphs;
 }
 
 function comparablesSummary(comparables: Comparable[]): Paragraph | null {
@@ -328,6 +371,7 @@ export async function generateReportDocx(data: ReportData): Promise<Buffer> {
     children.push(buildComparablesTable(comparables));
     const summary = comparablesSummary(comparables);
     if (summary) children.push(summary);
+    children.push(...buildAdjustmentRationale(comparables));
   } else {
     children.push(bodyText("No comparable evidence has been recorded for this case.", { italics: true }));
   }

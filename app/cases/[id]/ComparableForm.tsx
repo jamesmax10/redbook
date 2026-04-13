@@ -163,10 +163,14 @@ export default function ComparableForm({
   action,
   redirectStep,
   existingComparables = [],
+  justAdded = false,
+  defaultTransactionType = "",
 }: {
   action: (formData: FormData) => void;
   redirectStep?: string;
   existingComparables?: ExistingComparable[];
+  justAdded?: boolean;
+  defaultTransactionType?: string;
 }) {
   const [pasteText, setPasteText] = useState("");
   const [extractMsg, setExtractMsg] = useState<{
@@ -176,14 +180,18 @@ export default function ComparableForm({
   const [address, setAddress] = useState("");
   const [priceOrRent, setPriceOrRent] = useState("");
   const [area, setArea] = useState("");
-  const [transactionType, setTransactionType] = useState("");
+  const [transactionType, setTransactionType] = useState(defaultTransactionType);
+  const [transactionDate, setTransactionDate] = useState("");
+  const [dateEstimated, setDateEstimated] = useState(false);
   const [urlLoading, setUrlLoading] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [adjustments, setAdjustments] = useState<Adjustment[]>([]);
   const [filledFields, setFilledFields] = useState<Set<string>>(new Set());
   const [duplicateWarning, setDuplicateWarning] = useState(false);
+  const [showAdded, setShowAdded] = useState(justAdded);
   const skipDuplicateCheck = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const pasteRef = useRef<HTMLTextAreaElement>(null);
 
   function applyExtracted(extracted: {
     address?: string;
@@ -202,6 +210,11 @@ export default function ComparableForm({
     setFilledFields(filled);
 
     if (filled.size > 0) {
+      if (!transactionDate) {
+        setTransactionDate(new Date().toISOString().slice(0, 10));
+        setDateEstimated(true);
+        filled.add("transactionDate");
+      }
       setExtractMsg({
         type: "success",
         text: "Details extracted from listing — review and confirm before saving.",
@@ -209,7 +222,7 @@ export default function ComparableForm({
     } else {
       setExtractMsg({
         type: "warning",
-        text: "Could not extract any fields. Try pasting more detailed listing text.",
+        text: "Could not extract fields. Try pasting more detailed listing text.",
       });
     }
   }
@@ -227,7 +240,7 @@ export default function ComparableForm({
       if (!res.ok || !json.data) {
         setExtractMsg({
           type: "warning",
-          text: "We couldn't extract details from this link. Please paste listing text/details instead.",
+          text: "Couldn't extract from this link. Paste the listing text instead.",
         });
         return;
       }
@@ -235,7 +248,7 @@ export default function ComparableForm({
     } catch {
       setExtractMsg({
         type: "warning",
-        text: "We couldn't extract details from this link. Please paste listing text/details instead.",
+        text: "Couldn't extract from this link. Paste the listing text instead.",
       });
     } finally {
       setUrlLoading(false);
@@ -336,160 +349,192 @@ export default function ComparableForm({
   }
 
   return (
-    <form
-      ref={formRef}
-      id="comparable-form"
-      action={action}
-      onSubmit={handleSubmit}
-      className="rounded-xl border border-dashed border-zinc-200 p-5"
-    >
-      {redirectStep && <input type="hidden" name="_step" value={redirectStep} />}
-      <h3 className={`${overline} mb-4`}>Add Comparable</h3>
-
-      <div className="mb-5 rounded-lg bg-zinc-50 p-4">
-        <label htmlFor="paste_listing" className={labelClass}>
-          Paste Comparable
-        </label>
-        <textarea
-          id="paste_listing"
-          rows={4}
-          value={pasteText}
-          onChange={(e) => {
-            setPasteText(e.target.value);
-            if (extractMsg) setExtractMsg(null);
-          }}
-          placeholder="Paste listing details or a property listing URL"
-          className={inputClass + " resize-y"}
-        />
-        <button
-          type="button"
-          onClick={handleExtract}
-          disabled={!pasteText.trim() || urlLoading}
-          className={btnSecondary + " mt-2"}
-        >
-          {urlLoading ? "Importing from URL…" : "Extract Details"}
-        </button>
-        {extractMsg && (
-          <div
-            className={`mt-2 rounded-lg px-3 py-2 text-sm ${
-              extractMsg.type === "warning"
-                ? "bg-amber-50 text-amber-800 ring-1 ring-amber-200/60"
-                : "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200/60"
-            }`}
-          >
-            {extractMsg.text}
+    <div>
+      {showAdded && (
+        <div className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 ring-1 ring-emerald-200/60 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-emerald-600 text-sm font-medium">&#10003;</span>
+            <span className="text-sm text-emerald-800">
+              Comparable added successfully
+            </span>
           </div>
-        )}
-      </div>
-
-      {errors.length > 0 && (
-        <div className="mb-4 rounded-xl bg-red-50/80 px-4 py-3 ring-1 ring-red-200/60">
-          <ul className="space-y-1">
-            {errors.map((err) => (
-              <li
-                key={err}
-                className="flex items-center gap-2 text-sm text-red-700"
-              >
-                <span className="text-red-400">&#10005;</span>
-                {err}
-              </li>
-            ))}
-          </ul>
+          <button
+            type="button"
+            onClick={() => setShowAdded(false)}
+            className="text-emerald-400 hover:text-emerald-600 text-sm leading-none"
+            aria-label="Dismiss"
+          >
+            &times;
+          </button>
         </div>
       )}
 
-      <div className="space-y-4">
-        <div>
-          <label htmlFor="comp_address" className={labelClass}>
-            Address
-          </label>
-          <input
-            type="text"
-            id="comp_address"
-            name="address"
-            required
-            value={address}
-            onChange={(e) => { setAddress(e.target.value); if (duplicateWarning) setDuplicateWarning(false); setFilledFields((s) => { const n = new Set(s); n.delete("address"); return n; }); }}
-            className={filledFields.has("address") ? inputFilledClass : inputClass}
-          />
-        </div>
+      <form
+        ref={formRef}
+        id="comparable-form"
+        action={action}
+        onSubmit={handleSubmit}
+        className="space-y-5"
+      >
+        {redirectStep && <input type="hidden" name="_step" value={redirectStep} />}
 
-        <div>
-          <label htmlFor="transaction_type" className={labelClass}>
-            Transaction Type
+        {/* Paste + Extract */}
+        <div className="rounded-lg bg-zinc-50 p-4">
+          <label htmlFor="paste_listing" className={labelClass}>
+            Paste listing text or URL
           </label>
-          <select
-            id="transaction_type"
-            name="transaction_type"
-            required
-            value={transactionType}
-            onChange={(e) => { setTransactionType(e.target.value); setFilledFields((s) => { const n = new Set(s); n.delete("transactionType"); return n; }); }}
-            className={filledFields.has("transactionType") ? inputFilledClass : inputClass}
+          <textarea
+            ref={pasteRef}
+            id="paste_listing"
+            rows={2}
+            value={pasteText}
+            onChange={(e) => {
+              setPasteText(e.target.value);
+              if (extractMsg) setExtractMsg(null);
+              if (showAdded) setShowAdded(false);
+            }}
+            placeholder="Paste from Daft, BidX1, or any listing — URL or text"
+            className={inputClass + " resize-y"}
+            autoFocus={justAdded}
+          />
+          <button
+            type="button"
+            onClick={handleExtract}
+            disabled={!pasteText.trim() || urlLoading}
+            className={btnSecondary + " mt-2"}
           >
-            <option value="">Select type...</option>
-            {TRANSACTION_TYPE_OPTIONS.map((o) => (
-              <option key={o} value={o}>
-                {o}
-              </option>
-            ))}
-          </select>
+            {urlLoading ? "Importing…" : "Extract Details"}
+          </button>
+          {extractMsg && (
+            <div
+              className={`mt-2 rounded-lg px-3 py-2 text-sm ${
+                extractMsg.type === "warning"
+                  ? "bg-amber-50 text-amber-800 ring-1 ring-amber-200/60"
+                  : "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200/60"
+              }`}
+            >
+              {extractMsg.text}
+            </div>
+          )}
         </div>
 
-        <div>
-          <label htmlFor="transaction_date" className={labelClass}>
-            Transaction Date
-          </label>
-          <input
-            type="date"
-            id="transaction_date"
-            name="transaction_date"
-            required
-            className={inputClass}
-          />
-        </div>
+        {errors.length > 0 && (
+          <div className="rounded-xl bg-red-50/80 px-4 py-3 ring-1 ring-red-200/60">
+            <ul className="space-y-1">
+              {errors.map((err) => (
+                <li
+                  key={err}
+                  className="flex items-center gap-2 text-sm text-red-700"
+                >
+                  <span className="text-red-400">&#10005;</span>
+                  {err}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
-        <div>
-          <label htmlFor="price_or_rent" className={labelClass}>
-            Price / Rent (&euro;)
-          </label>
-          <input
-            type="number"
-            id="price_or_rent"
-            name="price_or_rent"
-            required
-            step="0.01"
-            min="0.01"
-            value={priceOrRent}
-            onChange={(e) => {
-              setPriceOrRent(e.target.value);
-              if (errors.length > 0) setErrors([]);
-              if (duplicateWarning) setDuplicateWarning(false);
-              setFilledFields((s) => { const n = new Set(s); n.delete("price"); return n; });
-            }}
-            className={hasFieldError("price") ? inputErrorClass : filledFields.has("price") ? inputFilledClass : inputClass}
-          />
-        </div>
+        {/* Fields — compact grid for core fields */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
+            <label htmlFor="comp_address" className={labelClass}>
+              Address
+            </label>
+            <input
+              type="text"
+              id="comp_address"
+              name="address"
+              required
+              value={address}
+              onChange={(e) => { setAddress(e.target.value); if (duplicateWarning) setDuplicateWarning(false); setFilledFields((s) => { const n = new Set(s); n.delete("address"); return n; }); }}
+              className={filledFields.has("address") ? inputFilledClass : inputClass}
+            />
+          </div>
 
-        <div>
-          <label htmlFor="comp_gross_internal_area" className={labelClass}>
-            Gross Internal Area (sq m)
-          </label>
-          <input
-            type="number"
-            id="comp_gross_internal_area"
-            name="gross_internal_area"
-            required
-            step="0.01"
-            min="0.01"
-            value={area}
-            onChange={(e) => {
-              setArea(e.target.value);
-              if (errors.length > 0) setErrors([]);
-              if (duplicateWarning) setDuplicateWarning(false);
-              setFilledFields((s) => { const n = new Set(s); n.delete("area"); return n; });
-            }}
-            className={hasFieldError("area") ? inputErrorClass : filledFields.has("area") ? inputFilledClass : inputClass}
-          />
+          <div>
+            <label htmlFor="transaction_type" className={labelClass}>
+              Transaction Type
+            </label>
+            <select
+              id="transaction_type"
+              name="transaction_type"
+              required
+              value={transactionType}
+              onChange={(e) => { setTransactionType(e.target.value); setFilledFields((s) => { const n = new Set(s); n.delete("transactionType"); return n; }); }}
+              className={filledFields.has("transactionType") ? inputFilledClass : inputClass}
+            >
+              <option value="">Select type...</option>
+              {TRANSACTION_TYPE_OPTIONS.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="transaction_date" className={labelClass}>
+              Transaction Date
+            </label>
+            <input
+              type="date"
+              id="transaction_date"
+              name="transaction_date"
+              required
+              value={transactionDate}
+              onChange={(e) => { setTransactionDate(e.target.value); setDateEstimated(false); setFilledFields((s) => { const n = new Set(s); n.delete("transactionDate"); return n; }); }}
+              className={filledFields.has("transactionDate") ? inputFilledClass : inputClass}
+            />
+            {dateEstimated && (
+              <p className="mt-1 text-xs text-amber-600">
+                Date estimated — confirm before saving
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="price_or_rent" className={labelClass}>
+              Price / Rent (&euro;)
+            </label>
+            <input
+              type="number"
+              id="price_or_rent"
+              name="price_or_rent"
+              required
+              step="0.01"
+              min="0.01"
+              value={priceOrRent}
+              onChange={(e) => {
+                setPriceOrRent(e.target.value);
+                if (errors.length > 0) setErrors([]);
+                if (duplicateWarning) setDuplicateWarning(false);
+                setFilledFields((s) => { const n = new Set(s); n.delete("price"); return n; });
+              }}
+              className={hasFieldError("price") ? inputErrorClass : filledFields.has("price") ? inputFilledClass : inputClass}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="comp_gross_internal_area" className={labelClass}>
+              Area (sq m)
+            </label>
+            <input
+              type="number"
+              id="comp_gross_internal_area"
+              name="gross_internal_area"
+              required
+              step="0.01"
+              min="0.01"
+              value={area}
+              onChange={(e) => {
+                setArea(e.target.value);
+                if (errors.length > 0) setErrors([]);
+                if (duplicateWarning) setDuplicateWarning(false);
+                setFilledFields((s) => { const n = new Set(s); n.delete("area"); return n; });
+              }}
+              className={hasFieldError("area") ? inputErrorClass : filledFields.has("area") ? inputFilledClass : inputClass}
+            />
+          </div>
         </div>
 
         {ratePreview !== null && (
@@ -503,7 +548,7 @@ export default function ComparableForm({
             }`}
           >
             <span className="text-sm text-zinc-500">
-              Raw rate:{" "}
+              Rate:{" "}
               <span className="font-semibold text-zinc-900">
                 &euro;{fmtCurrency(ratePreview)}/sq m
               </span>
@@ -624,7 +669,7 @@ export default function ComparableForm({
               This looks like a duplicate comparable.
             </p>
             <p className="text-sm text-amber-700 mt-1">
-              A comparable with the same address, price, and area already exists. Do you want to continue?
+              A comparable with the same address, price, and area already exists.
             </p>
             <div className="flex items-center gap-3 mt-3">
               <button
@@ -646,13 +691,13 @@ export default function ComparableForm({
         )}
 
         {!duplicateWarning && (
-          <div className="pt-2">
+          <div className="pt-1">
             <button type="submit" className={btnPrimary}>
               Add Comparable
             </button>
           </div>
         )}
-      </div>
-    </form>
+      </form>
+    </div>
   );
 }

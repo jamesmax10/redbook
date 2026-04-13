@@ -19,7 +19,7 @@ function firstOrSelf<T>(val: T | T[] | null | undefined): T | null {
   return Array.isArray(val) ? val[0] ?? null : val;
 }
 
-function countRelated(val: unknown[] | null | undefined): number {
+function countRelated(val: unknown): number {
   return Array.isArray(val) ? val.length : val ? 1 : 0;
 }
 

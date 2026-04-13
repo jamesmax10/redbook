@@ -67,6 +67,7 @@ export async function GET(
       : null,
     comparables: (comparables ?? []).map((c: Record<string, unknown>) => ({
       address: c.address as string,
+      transaction_type: (c.transaction_type as string) || "Sale",
       price_or_rent: c.price_or_rent as number,
       gross_internal_area: c.gross_internal_area as number,
       rate_per_sqm: c.rate_per_sqm as number,

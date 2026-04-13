@@ -123,10 +123,13 @@ export async function addComparable(caseId: string, formData: FormData) {
     }
   }
 
+  const address = formData.get("address") as string;
+  const transactionType = formData.get("transaction_type") as string;
+
   const { error } = await supabase.from("comparables").insert({
     case_id: caseId,
-    address: formData.get("address") as string,
-    transaction_type: formData.get("transaction_type") as string,
+    address,
+    transaction_type: transactionType,
     transaction_date: formData.get("transaction_date") as string,
     price_or_rent: priceOrRent,
     gross_internal_area: grossInternalArea,
@@ -139,7 +142,7 @@ export async function addComparable(caseId: string, formData: FormData) {
     throw new Error(error.message);
   }
 
-  redirect(caseUrl(caseId, formData));
+  redirect(caseUrl(caseId, formData, { added: "1", tt: transactionType }));
 }
 
 export type { Adjustment } from "@/lib/types";
@@ -295,3 +298,4 @@ export async function saveValuation(
 
   redirect(caseUrl(caseId, formData, { saved: "valuation" }));
 }
+

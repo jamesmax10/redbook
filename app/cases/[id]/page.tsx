@@ -207,6 +207,8 @@ export default async function CaseDetailPage({
   const rawStep = parseInt(resolvedSearchParams.step as string) || 1;
   const currentStep = rawStep >= 1 && rawStep <= 5 ? rawStep : 1;
   const valuationSaved = resolvedSearchParams.saved === "valuation";
+  const comparableAdded = resolvedSearchParams.added === "1";
+  const lastTransactionType = (resolvedSearchParams.tt as string) || "";
 
   // ── Fetch data ──────────────────────────────────────────────
 
@@ -588,6 +590,8 @@ export default async function CaseDetailPage({
               price_or_rent: c.price_or_rent,
               gross_internal_area: c.gross_internal_area,
             }))}
+            justAdded={comparableAdded}
+            defaultTransactionType={lastTransactionType}
           />
 
           <div className="mt-8">
