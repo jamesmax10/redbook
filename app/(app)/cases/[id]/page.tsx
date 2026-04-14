@@ -1,7 +1,7 @@
 import { Fragment } from "react";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase-server";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { updateCase, saveProperty, addComparable } from "@/app/actions";
 import type { Adjustment } from "@/lib/types";
 import {
@@ -210,7 +210,11 @@ export default async function CaseDetailPage({
   const comparableAdded = resolvedSearchParams.added === "1";
   const lastTransactionType = (resolvedSearchParams.tt as string) || "";
 
-  // ── Fetch data ──────────────────────────────────────────────
+  // ── Auth + Fetch data ────────────────────────────────────────
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
   const { data: caseData, error: caseError } = await supabase
     .from("cases")

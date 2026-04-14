@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { FACTOR_OPTIONS, type Adjustment } from "@/lib/types";
 import { fmtCurrency } from "@/lib/format";
 import {
@@ -189,9 +189,83 @@ export default function ComparableForm({
   const [filledFields, setFilledFields] = useState<Set<string>>(new Set());
   const [duplicateWarning, setDuplicateWarning] = useState(false);
   const [showAdded, setShowAdded] = useState(justAdded);
+  const [pprLoading, setPprLoading] = useState(false);
+  const [pprResults, setPprResults] = useState<Array<{
+    id: string;
+    sale_date: string;
+    address: string;
+    county: string | null;
+    price: number;
+    description: string | null;
+  }>>([]);
+  const [pprError, setPprError] = useState<string | null>(null);
+  const [pprUsed, setPprUsed] = useState(false);
   const skipDuplicateCheck = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
   const pasteRef = useRef<HTMLTextAreaElement>(null);
+
+  const handlePprSearch = useCallback(async () => {
+    const searchAddress = address.trim();
+    // #region agent log
+    fetch('http://127.0.0.1:7753/ingest/fe992d52-33c9-4a9f-ad9d-1d5e5b991e5e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'17e22d'},body:JSON.stringify({sessionId:'17e22d',location:'ComparableForm.tsx:handlePprSearch',message:'handlePprSearch called',data:{searchAddress,len:searchAddress.length},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
+    // #endregion
+    if (!searchAddress || searchAddress.length < 6) {
+      // #region agent log
+      fetch('http://127.0.0.1:7753/ingest/fe992d52-33c9-4a9f-ad9d-1d5e5b991e5e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'17e22d'},body:JSON.stringify({sessionId:'17e22d',location:'ComparableForm.tsx:handlePprSearch:earlyReturn',message:'early return - address too short',data:{searchAddress,len:searchAddress.length},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
+      setPprResults([]);
+      setPprError(null);
+      return;
+    }
+    setPprLoading(true);
+    setPprError(null);
+    setPprResults([]);
+    try {
+      const res = await fetch("/api/ppr/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: searchAddress }),
+      });
+      const json = await res.json();
+      // #region agent log
+      fetch('http://127.0.0.1:7753/ingest/fe992d52-33c9-4a9f-ad9d-1d5e5b991e5e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'17e22d'},body:JSON.stringify({sessionId:'17e22d',location:'ComparableForm.tsx:handlePprSearch:response',message:'PPR fetch response',data:{ok:res.ok,status:res.status,json},timestamp:Date.now(),hypothesisId:'H3,H4'})}).catch(()=>{});
+      // #endregion
+      if (!res.ok || json.error) {
+        setPprError(json.error ?? "Search failed.");
+        return;
+      }
+      if (json.results.length === 0) {
+        setPprError("No matches found.");
+        return;
+      }
+      setPprResults(json.results);
+    } catch (err) {
+      // #region agent log
+      fetch('http://127.0.0.1:7753/ingest/fe992d52-33c9-4a9f-ad9d-1d5e5b991e5e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'17e22d'},body:JSON.stringify({sessionId:'17e22d',location:'ComparableForm.tsx:handlePprSearch:catch',message:'PPR fetch error',data:{error:String(err)},timestamp:Date.now(),hypothesisId:'H3'})}).catch(()=>{});
+      // #endregion
+      setPprError("Search failed. Check your connection.");
+    } finally {
+      setPprLoading(false);
+    }
+  }, [address]);
+
+  useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7753/ingest/fe992d52-33c9-4a9f-ad9d-1d5e5b991e5e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'17e22d'},body:JSON.stringify({sessionId:'17e22d',location:'ComparableForm.tsx:useEffect',message:'useEffect fired',data:{address,trimmedLen:address.trim().length},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
+    if (address.trim().length < 6) {
+      setPprResults([]);
+      setPprError(null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      // #region agent log
+      fetch('http://127.0.0.1:7753/ingest/fe992d52-33c9-4a9f-ad9d-1d5e5b991e5e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'17e22d'},body:JSON.stringify({sessionId:'17e22d',location:'ComparableForm.tsx:useEffect:timeout',message:'setTimeout fired, calling handlePprSearch',data:{address},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
+      handlePprSearch();
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [address, handlePprSearch]);
 
   function applyExtracted(extracted: {
     address?: string;
@@ -268,6 +342,25 @@ export default function ComparableForm({
     applyExtracted(extracted);
   }
 
+  function applyPprResult(result: {
+    sale_date: string;
+    price: number;
+  }) {
+    setPriceOrRent(String(result.price));
+    setTransactionDate(result.sale_date);
+    setTransactionType("Sale");
+    setDateEstimated(false);
+    setPprResults([]);
+    setPprUsed(true);
+    setFilledFields((s) => {
+      const n = new Set(s);
+      n.add("price");
+      n.add("transactionDate");
+      n.add("transactionType");
+      return n;
+    });
+  }
+
   const price = parseFloat(priceOrRent);
   const areaVal = parseFloat(area);
   const ratePreview =
@@ -340,6 +433,9 @@ export default function ComparableForm({
 
     setErrors([]);
     setDuplicateWarning(false);
+    setPprResults([]);
+    setPprUsed(false);
+    setPprError(null);
   }
 
   function forceSubmit() {
@@ -446,9 +542,90 @@ export default function ComparableForm({
               name="address"
               required
               value={address}
-              onChange={(e) => { setAddress(e.target.value); if (duplicateWarning) setDuplicateWarning(false); setFilledFields((s) => { const n = new Set(s); n.delete("address"); return n; }); }}
+              onChange={(e) => { setAddress(e.target.value); if (duplicateWarning) setDuplicateWarning(false); setFilledFields((s) => { const n = new Set(s); n.delete("address"); return n; }); setPprResults([]); setPprUsed(false); }}
               className={filledFields.has("address") ? inputFilledClass : inputClass}
             />
+
+            {pprLoading && (
+              <div className="mt-1.5 flex items-center gap-2 text-xs text-zinc-400">
+                <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-500" />
+                Searching property register...
+              </div>
+            )}
+
+            {pprError && address.trim().length >= 6 && (
+              <p className="mt-1.5 text-xs text-zinc-400">
+                No matches found in Property Price Register
+              </p>
+            )}
+
+            {pprUsed && (
+              <p className="mt-1.5 text-xs text-emerald-600">
+                ✓ Price and date filled from Property Price Register
+              </p>
+            )}
+
+            {pprResults.length > 0 && (
+              <div className="mt-1.5 border border-zinc-200 rounded-xl overflow-hidden bg-white shadow-lg z-10 relative">
+                <div className="px-4 py-2 border-b border-zinc-100 flex items-center justify-between">
+                  <p className="text-xs text-zinc-500">
+                    Select the correct sale from the register
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setPprResults([])}
+                    className="text-xs text-zinc-400 hover:text-zinc-600"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+                <ul className="divide-y divide-zinc-50 max-h-64 overflow-y-auto">
+                  {pprResults.map((r, index) => (
+                    <li key={r.id}>
+                      <button
+                        type="button"
+                        onClick={() => applyPprResult(r)}
+                        className="w-full text-left px-4 py-3 hover:bg-zinc-50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium text-zinc-900 truncate">
+                                {r.address}
+                              </p>
+                              {index === 0 && (
+                                <span className="shrink-0 text-xs font-medium bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20 rounded-full px-2 py-0.5">
+                                  Most recent
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-zinc-500 mt-0.5">
+                              {r.county}
+                              {r.description ? " · " + r.description : ""}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-sm font-semibold text-zinc-900 tabular-nums">
+                              €{Number(r.price).toLocaleString("en-IE")}
+                            </p>
+                            <p className="text-xs text-zinc-500 tabular-nums">
+                              {new Date(r.sale_date).toLocaleDateString(
+                                "en-IE",
+                                {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                }
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           <div>

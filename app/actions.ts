@@ -1,6 +1,6 @@
 "use server";
 
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { Adjustment } from "@/lib/types";
@@ -20,6 +20,26 @@ function caseUrl(caseId: string, formData?: FormData, extra?: Record<string, str
   return `/cases/${caseId}${qs ? `?${qs}` : ""}`;
 }
 
+async function requireAuth() {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    throw new Error("Unauthorized");
+  }
+  return { supabase, user };
+}
+
+async function requireCaseOwnership(supabase: Awaited<ReturnType<typeof createClient>>, caseId: string, userId: string) {
+  const { data: existing } = await supabase
+    .from("cases")
+    .select("id")
+    .eq("id", caseId)
+    .eq("user_id", userId)
+    .single();
+
+  if (!existing) throw new Error("Case not found or access denied.");
+}
+
 export async function createCase(formData: FormData) {
   const client_name = requireField(formData, "client_name", "Client name");
   const property_address = requireField(formData, "property_address", "Property address");
@@ -27,9 +47,18 @@ export async function createCase(formData: FormData) {
   const purpose = requireField(formData, "purpose", "Purpose");
   const basis_of_value = requireField(formData, "basis_of_value", "Basis of value");
 
+  const { supabase, user } = await requireAuth();
+
   const { data, error } = await supabase
     .from("cases")
-    .insert({ client_name, property_address, valuation_date, purpose, basis_of_value })
+    .insert({
+      client_name,
+      property_address,
+      valuation_date,
+      purpose,
+      basis_of_value,
+      user_id: user.id,
+    })
     .select()
     .single();
 
@@ -46,6 +75,9 @@ export async function updateCase(caseId: string, formData: FormData) {
   const valuation_date = requireField(formData, "valuation_date", "Valuation date");
   const purpose = requireField(formData, "purpose", "Purpose");
   const basis_of_value = requireField(formData, "basis_of_value", "Basis of value");
+
+  const { supabase, user } = await requireAuth();
+  await requireCaseOwnership(supabase, caseId, user.id);
 
   const { error } = await supabase
     .from("cases")
@@ -71,6 +103,9 @@ export async function saveProperty(
   if (isNaN(grossInternalArea) || grossInternalArea <= 0) {
     throw new Error("Gross Internal Area must be greater than 0.");
   }
+
+  const { supabase, user } = await requireAuth();
+  await requireCaseOwnership(supabase, caseId, user.id);
 
   const row = {
     case_id: caseId,
@@ -107,6 +142,9 @@ export async function addComparable(caseId: string, formData: FormData) {
   if (isNaN(grossInternalArea) || grossInternalArea <= 0) {
     throw new Error("Gross Internal Area must be greater than 0.");
   }
+
+  const { supabase, user } = await requireAuth();
+  await requireCaseOwnership(supabase, caseId, user.id);
 
   const ratePerSqm = priceOrRent / grossInternalArea;
 
@@ -171,6 +209,9 @@ export async function updateComparable(
     return { success: false, error: "Gross Internal Area must be greater than 0." };
   }
 
+  const { supabase, user } = await requireAuth();
+  await requireCaseOwnership(supabase, caseId, user.id);
+
   const ratePerSqm = priceOrRent / grossInternalArea;
 
   let adjustments: Adjustment[] | null = null;
@@ -209,6 +250,9 @@ export async function updateComparable(
 }
 
 export async function deleteComparable(comparableId: string, caseId: string, redirectStep?: string) {
+  const { supabase, user } = await requireAuth();
+  await requireCaseOwnership(supabase, caseId, user.id);
+
   const { error } = await supabase
     .from("comparables")
     .delete()
@@ -228,6 +272,9 @@ export async function saveAdjustments(
   adjustments: Adjustment[],
   redirectStep?: string
 ) {
+  const { supabase, user } = await requireAuth();
+  await requireCaseOwnership(supabase, caseId, user.id);
+
   const { data: comp, error: fetchError } = await supabase
     .from("comparables")
     .select("rate_per_sqm")
@@ -274,6 +321,9 @@ export async function saveValuation(
   const valuer_name =
     (formData.get("valuer_name") as string)?.trim() || null;
 
+  const { supabase, user } = await requireAuth();
+  await requireCaseOwnership(supabase, caseId, user.id);
+
   const row = {
     case_id: caseId,
     adopted_rate_per_sqm: adopted_rate_per_sqm
@@ -298,4 +348,3 @@ export async function saveValuation(
 
   redirect(caseUrl(caseId, formData, { saved: "valuation" }));
 }
-

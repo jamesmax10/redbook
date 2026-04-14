@@ -1,12 +1,8 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase-server";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
   btnPrimary,
-  card,
-  pageTitle,
-  thClass,
-  tdBase,
-  trHover,
 } from "@/lib/styles";
 import {
   deriveCaseStatus,
@@ -30,8 +26,6 @@ const FILTERABLE_STATUSES: CaseStatus[] = [
   "incomplete",
 ];
 
-// Supabase returns arrays for one-to-many but single objects for one-to-one
-// (detected via UNIQUE constraint on the FK). This helper handles both shapes.
 function firstOrSelf<T>(val: T | T[] | null | undefined): T | null {
   if (val == null) return null;
   return Array.isArray(val) ? val[0] ?? null : val;
@@ -49,10 +43,8 @@ interface CaseRow {
   purpose: string;
   basis_of_value: string;
   created_at: string;
-  // one-to-many (no unique constraint) → array
   properties: Record<string, unknown>[] | Record<string, unknown> | null;
   comparables: Record<string, unknown>[] | Record<string, unknown> | null;
-  // one-to-one (unique constraint on case_id) → single object
   valuations: Record<string, unknown>[] | Record<string, unknown> | null;
 }
 
@@ -104,6 +96,23 @@ function StepProgressDots({ completedSteps }: { completedSteps: Set<number> }) {
   );
 }
 
+function getActionPrompt(completedSteps: Set<number>): string {
+  if (!completedSteps.has(2)) return "Add subject property";
+  if (!completedSteps.has(3)) return "Add comparables";
+  if (!completedSteps.has(4)) return "Set adopted rate";
+  if (completedSteps.size === 5) return "Report ready to export";
+  return "Continue workflow";
+}
+
+const SECTION_CONFIG: {
+  key: "incomplete" | "in_progress" | "ready";
+  label: string;
+}[] = [
+  { key: "incomplete", label: "NEEDS ATTENTION" },
+  { key: "in_progress", label: "IN PROGRESS" },
+  { key: "ready", label: "READY" },
+];
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -113,6 +122,10 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ status?: string | string[] | undefined }>;
 }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
   const sp = await searchParams;
   const activeFilter = parseStatusFilter(sp.status);
 
@@ -156,14 +169,22 @@ export default async function DashboardPage({
     incomplete: cases.filter((c) => c.status === "incomplete").length,
   };
 
+  const grouped: Record<CaseStatus, typeof filteredCases> = {
+    incomplete: filteredCases.filter((c) => c.status === "incomplete"),
+    in_progress: filteredCases.filter((c) => c.status === "in_progress"),
+    ready: filteredCases.filter((c) => c.status === "ready"),
+  };
+
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-10">
+      {/* Top bar */}
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className={pageTitle}>Valuations</h1>
-          <p className="text-sm text-zinc-400 mt-1">
-            Manage and track valuation cases
+          <h1 className="text-xl font-semibold text-zinc-900 tracking-tight">
+            Valuations
+          </h1>
+          <p className="text-sm text-zinc-500 mt-0.5">
+            {counts.total} cases
           </p>
         </div>
         <Link href="/cases/new" className={btnPrimary}>
@@ -171,52 +192,48 @@ export default async function DashboardPage({
         </Link>
       </div>
 
-      {/* Metrics */}
-      {counts.total > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-          <MetricCard
-            label="Total Cases"
-            value={counts.total}
-            href="/"
-            isActive={activeFilter === null}
-          />
-          <MetricCard
-            label="Ready"
-            value={counts.ready}
-            color="emerald"
-            href={activeFilter === "ready" ? "/" : "/?status=ready"}
-            isActive={activeFilter === "ready"}
-          />
-          <MetricCard
-            label="In Progress"
-            value={counts.in_progress}
-            color="blue"
-            href={
-              activeFilter === "in_progress" ? "/" : "/?status=in_progress"
-            }
-            isActive={activeFilter === "in_progress"}
-          />
-          <MetricCard
-            label="Incomplete"
-            value={counts.incomplete}
-            color="amber"
-            href={
-              activeFilter === "incomplete" ? "/" : "/?status=incomplete"
-            }
-            isActive={activeFilter === "incomplete"}
-          />
-        </div>
-      )}
-
       {error && (
-        <div className="bg-red-50/80 text-red-700 px-4 py-3 rounded-xl text-sm mb-6 ring-1 ring-red-200/60">
+        <div className="bg-red-50 text-red-700 px-4 py-3 rounded-xl text-sm mb-6">
           Failed to load cases: {error.message}
         </div>
       )}
 
+      {/* Metric strip */}
+      {counts.total > 0 && (
+        <div className="flex items-center gap-6 mb-8 border border-zinc-200 bg-white rounded-xl px-6 py-4 divide-x divide-zinc-100">
+          <StatPill
+            label="Total"
+            value={counts.total}
+            href="/"
+            isActive={activeFilter === null}
+          />
+          <StatPill
+            label="Ready"
+            value={counts.ready}
+            href={activeFilter === "ready" ? "/" : "/?status=ready"}
+            isActive={activeFilter === "ready"}
+            valueColor="text-emerald-600"
+          />
+          <StatPill
+            label="In Progress"
+            value={counts.in_progress}
+            href={activeFilter === "in_progress" ? "/" : "/?status=in_progress"}
+            isActive={activeFilter === "in_progress"}
+            valueColor="text-blue-600"
+          />
+          <StatPill
+            label="Incomplete"
+            value={counts.incomplete}
+            href={activeFilter === "incomplete" ? "/" : "/?status=incomplete"}
+            isActive={activeFilter === "incomplete"}
+            valueColor="text-amber-600"
+          />
+        </div>
+      )}
+
       {cases.length === 0 && !error && (
-        <div className={`${card} text-center py-20`}>
-          <p className="text-zinc-400 mb-4">No valuations yet.</p>
+        <div className="bg-white border border-dashed border-zinc-300 rounded-xl text-center py-20">
+          <p className="text-zinc-400 text-sm mb-4">No valuations yet.</p>
           <Link href="/cases/new" className={btnPrimary}>
             Create your first valuation
           </Link>
@@ -224,7 +241,7 @@ export default async function DashboardPage({
       )}
 
       {cases.length > 0 && filteredCases.length === 0 && (
-        <div className={`${card} text-center py-12 px-6`}>
+        <div className="bg-white border border-dashed border-zinc-300 rounded-xl text-center py-12 px-6">
           <p className="text-zinc-500 text-sm mb-3">
             No cases match this filter.
           </p>
@@ -238,64 +255,65 @@ export default async function DashboardPage({
       )}
 
       {cases.length > 0 && filteredCases.length > 0 && (
-        <div className={`${card} overflow-hidden`}>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-zinc-100">
-                <th className={`text-left px-5 py-3 ${thClass}`}>Client</th>
-                <th className={`text-left px-5 py-3 ${thClass}`}>
-                  Property Address
-                </th>
-                <th className={`text-left px-5 py-3 ${thClass}`}>Status</th>
-                <th className={`text-left px-5 py-3 ${thClass}`}>
-                  Valuation Date
-                </th>
-                <th className={`text-left px-5 py-3 ${thClass}`}>Purpose</th>
-                <th className={`text-left px-5 py-3 ${thClass}`}>Progress</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredCases.map((c) => {
-                const badge = STATUS_BADGE[c.status];
-                const incompleteFirstCell =
-                  c.status === "incomplete"
-                    ? "border-l-2 border-l-amber-400/65"
-                    : "";
-                return (
-                  <tr
-                    key={c.id}
-                    className={`border-b border-zinc-50 last:border-0 ${trHover}`}
-                  >
-                    <td className={`${tdBase} ${incompleteFirstCell}`}>
+        <div>
+          {SECTION_CONFIG.map(({ key, label }, sectionIdx) => {
+            const group = grouped[key];
+            if (group.length === 0) return null;
+            return (
+              <div key={key}>
+                <div className={`flex items-center gap-3 mb-3 ${sectionIdx > 0 ? "mt-6" : ""}`}>
+                  <span className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">
+                    {label}
+                  </span>
+                  <div className="flex-1 h-px bg-zinc-200" />
+                  <span className="text-xs text-zinc-400">{group.length}</span>
+                </div>
+                <div>
+                  {group.map((c) => {
+                    const badge = STATUS_BADGE[c.status];
+                    const actionPrompt = getActionPrompt(c.completedSteps);
+                    return (
                       <Link
+                        key={c.id}
                         href={`/cases/${c.id}`}
-                        className="text-zinc-900 font-medium hover:text-zinc-600 transition-colors"
+                        className="block group"
                       >
-                        {c.client_name}
+                        <div
+                          className={`bg-white border border-zinc-200 rounded-xl px-5 py-4 mb-2 hover:border-zinc-300 hover:shadow-sm transition-all ${
+                            c.status === "incomplete"
+                              ? "border-l-4 border-l-amber-400"
+                              : ""
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-zinc-900 text-[15px] group-hover:text-zinc-700 transition-colors truncate">
+                                {c.client_name}
+                              </p>
+                              <p className="text-sm text-zinc-500 mt-0.5 truncate">
+                                {c.property_address}
+                              </p>
+                            </div>
+                            <span
+                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 ${badge.className}`}
+                            >
+                              {badge.label}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 mt-3">
+                            <StepProgressDots completedSteps={c.completedSteps} />
+                            <span className="text-xs text-zinc-400">
+                              {actionPrompt}
+                            </span>
+                          </div>
+                        </div>
                       </Link>
-                    </td>
-                    <td className={`${tdBase} text-zinc-500`}>
-                      {c.property_address}
-                    </td>
-                    <td className={tdBase}>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.className}`}
-                      >
-                        {badge.label}
-                      </span>
-                    </td>
-                    <td className={`${tdBase} text-zinc-500 tabular-nums`}>
-                      {c.valuation_date}
-                    </td>
-                    <td className={`${tdBase} text-zinc-500`}>{c.purpose}</td>
-                    <td className={tdBase}>
-                      <StepProgressDots completedSteps={c.completedSteps} />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -303,43 +321,37 @@ export default async function DashboardPage({
 }
 
 // ---------------------------------------------------------------------------
-// Metric card
+// Stat pill (inline metric in the strip)
 // ---------------------------------------------------------------------------
 
-function MetricCard({
+function StatPill({
   label,
   value,
-  color,
   href,
   isActive,
+  valueColor,
 }: {
   label: string;
   value: number;
-  color?: "emerald" | "blue" | "amber";
   href: string;
   isActive?: boolean;
+  valueColor?: string;
 }) {
-  const valueColor = color
-    ? ({
-        emerald: "text-emerald-600",
-        blue: "text-blue-600",
-        amber: "text-amber-600",
-      })[color]
-    : "text-zinc-900";
-
   return (
     <Link
       href={href}
-      className={`block rounded-xl transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 ${
-        isActive ? "ring-2 ring-zinc-900/15 shadow-sm" : "hover:shadow-md"
+      className={`pl-6 first:pl-0 flex flex-col gap-0.5 hover:opacity-80 transition-opacity ${
+        isActive ? "opacity-100" : "opacity-70"
       }`}
     >
-      <div className={`${card} px-5 py-4 h-full`}>
-        <p className="text-xs text-zinc-400 mb-1">{label}</p>
-        <p className={`text-2xl font-semibold tabular-nums ${valueColor}`}>
-          {value}
-        </p>
-      </div>
+      <span className="text-xs text-zinc-500 font-medium uppercase tracking-wider">
+        {label}
+      </span>
+      <span
+        className={`text-2xl font-semibold tabular-nums ${valueColor ?? "text-zinc-900"}`}
+      >
+        {value}
+      </span>
     </Link>
   );
 }

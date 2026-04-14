@@ -1,6 +1,6 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase-server";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { Adjustment } from "@/lib/types";
 import { fmtCurrency, fmtDate } from "@/lib/format";
 import {
@@ -53,6 +53,10 @@ export default async function ReportPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
   const { data: caseData, error: caseError } = await supabase
     .from("cases")
