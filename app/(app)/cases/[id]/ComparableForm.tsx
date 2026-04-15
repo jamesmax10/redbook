@@ -344,16 +344,19 @@ export default function ComparableForm({
 
   function applyPprResult(result: {
     sale_date: string;
+    address: string;
     price: number;
   }) {
+    setAddress(result.address);
     setPriceOrRent(String(result.price));
-    setTransactionDate(result.sale_date);
+    setTransactionDate(new Date(result.sale_date).toISOString().slice(0, 10));
     setTransactionType("Sale");
     setDateEstimated(false);
     setPprResults([]);
     setPprUsed(true);
     setFilledFields((s) => {
       const n = new Set(s);
+      n.add("address");
       n.add("price");
       n.add("transactionDate");
       n.add("transactionType");
