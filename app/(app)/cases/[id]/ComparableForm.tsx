@@ -215,6 +215,7 @@ export default function ComparableForm({
   const [areaError, setAreaError] = useState<string | null>(null);
   const [areaName, setAreaName] = useState<string | null>(null);
   const skipDuplicateCheck = useRef(false);
+  const skipPprSearch = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
   const pasteRef = useRef<HTMLTextAreaElement>(null);
 
@@ -264,6 +265,10 @@ export default function ComparableForm({
   }, [address]);
 
   useEffect(() => {
+    if (skipPprSearch.current) {
+      skipPprSearch.current = false;
+      return;
+    }
     // #region agent log
     fetch('http://127.0.0.1:7753/ingest/fe992d52-33c9-4a9f-ad9d-1d5e5b991e5e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'17e22d'},body:JSON.stringify({sessionId:'17e22d',location:'ComparableForm.tsx:useEffect',message:'useEffect fired',data:{address,trimmedLen:address.trim().length},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
     // #endregion
@@ -322,6 +327,7 @@ export default function ComparableForm({
     address: string;
     price: number;
   }) {
+    skipPprSearch.current = true;
     setAddress(result.address);
     setPriceOrRent(String(result.price));
     setTransactionDate(result.sale_date);
@@ -420,6 +426,7 @@ export default function ComparableForm({
     address: string;
     price: number;
   }) {
+    skipPprSearch.current = true;
     setAddress(result.address);
     setPriceOrRent(String(result.price));
     setTransactionDate(new Date(result.sale_date).toISOString().slice(0, 10));
@@ -609,162 +616,118 @@ export default function ComparableForm({
         {/* Fields — compact grid for core fields */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
-            <div className="flex items-center gap-1 p-1 bg-zinc-100 rounded-lg w-fit mb-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchMode("address");
-                  setAreaResults([]);
-                  setAreaError(null);
-                }}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  searchMode === "address"
-                    ? "bg-white text-zinc-900 shadow-sm"
-                    : "text-zinc-500 hover:text-zinc-700"
-                }`}
-              >
-                Known address
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchMode("area");
-                  setPprResults([]);
-                  setPprError(null);
-                }}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  searchMode === "area"
-                    ? "bg-white text-zinc-900 shadow-sm"
-                    : "text-zinc-500 hover:text-zinc-700"
-                }`}
-              >
-                Browse area sales
-              </button>
-            </div>
-          </div>
-
-          {searchMode === "area" && (
-            <div className="sm:col-span-2">
-              <label className={labelClass}>
-                <span>Search Area</span>
-                <span className="ml-2 inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 ring-1 ring-emerald-600/20 rounded-full px-2 py-0.5">
-                  PPR Smart Search
-                </span>
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={areaQuery}
-                  onChange={(e) => setAreaQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAreaSearch();
-                    }
-                  }}
-                  placeholder="e.g. Salthill, Galway"
-                  className={inputClass}
-                />
-                <button
-                  type="button"
-                  onClick={handleAreaSearch}
-                  disabled={areaLoading || areaQuery.trim().length < 3}
-                  className={btnSecondary}
-                >
-                  {areaLoading ? "Searching..." : "Search"}
-                </button>
-              </div>
-
-              {areaLoading && (
-                <div className="mt-2 flex items-center gap-2.5 bg-emerald-50 rounded-lg px-3 py-2 ring-1 ring-emerald-200/60">
-                  <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-emerald-200 border-t-emerald-600 shrink-0" />
-                  <span className="text-xs text-emerald-700 font-medium">
-                    Searching Property Price Register...
-                  </span>
-                </div>
-              )}
-
-              {areaError && (
-                <p className="mt-2 text-xs text-zinc-500 bg-zinc-50 rounded-lg px-3 py-2 ring-1 ring-zinc-200/60">
-                  {areaError}
-                </p>
-              )}
-
-              {areaResults.length > 0 && (
-                <div className="mt-3 border border-zinc-200 rounded-xl overflow-hidden bg-white">
-                  <div className="px-4 py-2.5 border-b border-zinc-100 bg-zinc-50">
-                    <p className="text-xs font-medium text-zinc-700">
-                      {areaResults.length} recent sales near{" "}
-                      {areaQuery} — click to use as comparable
-                    </p>
-                  </div>
-                  <ul className="divide-y divide-zinc-50 max-h-80 overflow-y-auto">
-                    {areaResults.map((r) => (
-                      <li key={r.id}>
-                        <button
-                          type="button"
-                          onClick={() => applyAreaResult(r)}
-                          className="w-full text-left px-4 py-3 hover:bg-zinc-50 transition-colors"
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium text-zinc-900 truncate">
-                                {r.address}
-                              </p>
-                              <p className="text-xs text-zinc-500 mt-0.5">
-                                {r.county}
-                                {r.description ? " · " + r.description : ""}
-                                {" · "}
-                                <span className="text-zinc-400">
-                                  {r.distance_km.toFixed(2)}km away
-                                </span>
-                              </p>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <p className="text-sm font-semibold text-zinc-900 tabular-nums">
-                                €{Number(r.price).toLocaleString("en-IE")}
-                              </p>
-                              <p className="text-xs text-zinc-500 tabular-nums">
-                                {new Date(r.sale_date).toLocaleDateString("en-IE", {
-                                  day: "numeric",
-                                  month: "short",
-                                  year: "numeric",
-                                })}
-                              </p>
-                            </div>
-                          </div>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-
-          {searchMode === "address" && (
-          <div className="sm:col-span-2">
-            <label htmlFor="comp_address" className={labelClass}>
-              <span>Address</span>
-              <span className="ml-2 inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 ring-1 ring-emerald-600/20 rounded-full px-2 py-0.5">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8"/>
-                  <path d="m21 21-4.35-4.35"/>
+            <label className={labelClass}>
+              <span>Property Search</span>
+              <span className="ml-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-violet-50 text-violet-700 border border-violet-200">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2L13.09 8.26L19 6L14.74 10.74L21 12L14.74 13.26L19 18L13.09 15.74L12 22L10.91 15.74L5 18L9.26 13.26L3 12L9.26 10.74L5 6L10.91 8.26L12 2Z"/>
                 </svg>
                 PPR Smart Search
               </span>
             </label>
-            <input
-              type="text"
-              id="comp_address"
-              name="address"
-              required
-              value={address}
-              onChange={(e) => { setAddress(e.target.value); if (duplicateWarning) setDuplicateWarning(false); setFilledFields((s) => { const n = new Set(s); n.delete("address"); return n; }); setPprResults([]); setPprUsed(false); }}
-              className={filledFields.has("address") ? inputFilledClass : inputClass}
-            />
 
-            {pprLoading && (
+            <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm overflow-hidden ring-1 ring-zinc-100">
+              <div className="flex border-b border-zinc-100 bg-zinc-50/50">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchMode("address");
+                    setAreaResults([]);
+                    setAreaError(null);
+                  }}
+                  className={`flex-1 px-4 py-3 text-sm font-medium transition-all ${
+                    searchMode === "address"
+                      ? "bg-white text-zinc-900 shadow-sm border-b-2 border-b-violet-500"
+                      : "text-zinc-400 hover:text-zinc-600"
+                  }`}
+                >
+                  Known address
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchMode("area");
+                    setPprResults([]);
+                    setPprError(null);
+                  }}
+                  className={`flex-1 px-4 py-3 text-sm font-medium transition-all ${
+                    searchMode === "area"
+                      ? "bg-white text-zinc-900 shadow-sm border-b-2 border-b-violet-500"
+                      : "text-zinc-400 hover:text-zinc-600"
+                  }`}
+                >
+                  ✦ Browse area sales
+                </button>
+              </div>
+
+              <div className="p-4">
+                {searchMode === "address" && (
+                  <div className="relative">
+                    <input
+                      id="comp_address"
+                      type="text"
+                      required
+                      value={address}
+                      onChange={(e) => {
+                        setAddress(e.target.value);
+                        if (duplicateWarning) setDuplicateWarning(false);
+                        setPprResults([]);
+                        setPprUsed(false);
+                        setFilledFields((s) => {
+                          const n = new Set(s);
+                          n.delete("address");
+                          return n;
+                        });
+                      }}
+                      placeholder="Search 779,547 PPR records by address..."
+                      className="w-full px-4 py-3 pr-12 rounded-xl border border-zinc-200 bg-zinc-50 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 focus:bg-white transition-all"
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-violet-400">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2L13.09 8.26L19 6L14.74 10.74L21 12L14.74 13.26L19 18L13.09 15.74L12 22L10.91 15.74L5 18L9.26 13.26L3 12L9.26 10.74L5 6L10.91 8.26L12 2Z"/>
+                      </svg>
+                    </div>
+                  </div>
+                )}
+
+                {searchMode === "area" && (
+                  <div className="relative flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={areaQuery}
+                        onChange={(e) => setAreaQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAreaSearch();
+                          }
+                        }}
+                        placeholder="e.g. Salthill, Galway"
+                        className="w-full px-4 py-3 pr-12 rounded-xl border border-zinc-200 bg-zinc-50 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 focus:bg-white transition-all"
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-violet-400">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 2L13.09 8.26L19 6L14.74 10.74L21 12L14.74 13.26L19 18L13.09 15.74L12 22L10.91 15.74L5 18L9.26 13.26L3 12L9.26 10.74L5 6L10.91 8.26L12 2Z"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAreaSearch}
+                      disabled={areaLoading || areaQuery.trim().length < 3}
+                      className={btnSecondary}
+                    >
+                      {areaLoading ? "Searching..." : "Search"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <input type="hidden" name="address" value={address} />
+
+            {searchMode === "address" && pprLoading && (
               <div className="mt-2 flex items-center gap-2.5 bg-emerald-50 rounded-lg px-3 py-2 ring-1 ring-emerald-200/60">
                 <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-emerald-200 border-t-emerald-600 shrink-0" />
                 <span className="text-xs text-emerald-700 font-medium">
@@ -773,27 +736,9 @@ export default function ComparableForm({
               </div>
             )}
 
-            {pprError && address.trim().length >= 6 && (
-              <p className="mt-2 text-xs text-zinc-500 bg-zinc-50 rounded-lg px-3 py-2 ring-1 ring-zinc-200/60">
-                No PPR records found for this address. The property may not have sold since 2010, or try shortening the address.
-              </p>
-            )}
-
-            {pprUsed && (
-              <div className="mt-2 flex items-center gap-2 bg-emerald-50 rounded-lg px-3 py-2 ring-1 ring-emerald-200/60">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600 shrink-0">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                  <polyline points="9 12 11 14 15 10"/>
-                </svg>
-                <p className="text-xs font-medium text-emerald-700">
-                  Verified from the Property Price Register
-                </p>
-              </div>
-            )}
-
-            {pprResults.length > 0 && (
+            {searchMode === "address" && pprResults.length > 0 && (
               <div className="mt-1.5 border border-zinc-200 rounded-xl overflow-hidden bg-white shadow-lg z-10 relative">
-                <div className="px-4 py-2 border-b border-zinc-100 flex items-center justify-between">
+                <div className="px-4 py-2.5 border-b border-zinc-100 flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600">
                       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
@@ -840,14 +785,94 @@ export default function ComparableForm({
                               €{Number(r.price).toLocaleString("en-IE")}
                             </p>
                             <p className="text-xs text-zinc-500 tabular-nums">
-                              {new Date(r.sale_date).toLocaleDateString(
-                                "en-IE",
-                                {
-                                  day: "numeric",
-                                  month: "short",
-                                  year: "numeric",
-                                }
-                              )}
+                              {new Date(r.sale_date).toLocaleDateString("en-IE", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {searchMode === "address" && pprError && address.trim().length >= 6 && (
+              <p className="mt-2 text-xs text-zinc-500 bg-zinc-50 rounded-lg px-3 py-2 ring-1 ring-zinc-200/60">
+                No PPR records found for this address. The property may not have sold since 2010, or try shortening the address.
+              </p>
+            )}
+
+            {pprUsed && (
+              <div className="mt-2 flex items-center gap-2 bg-emerald-50 rounded-lg px-3 py-2 ring-1 ring-emerald-200/60">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600 shrink-0">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  <polyline points="9 12 11 14 15 10"/>
+                </svg>
+                <p className="text-xs font-medium text-emerald-700">
+                  Verified from the Property Price Register
+                </p>
+              </div>
+            )}
+
+            {searchMode === "area" && areaLoading && (
+              <div className="mt-2 flex items-center gap-2.5 bg-emerald-50 rounded-lg px-3 py-2 ring-1 ring-emerald-200/60">
+                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-emerald-200 border-t-emerald-600 shrink-0" />
+                <span className="text-xs text-emerald-700 font-medium">
+                  Searching Property Price Register...
+                </span>
+              </div>
+            )}
+
+            {searchMode === "area" && areaError && (
+              <p className="mt-2 text-xs text-zinc-500 bg-zinc-50 rounded-lg px-3 py-2 ring-1 ring-zinc-200/60">
+                {areaError}
+              </p>
+            )}
+
+            {searchMode === "area" && areaResults.length > 0 && (
+              <div className="mt-1.5 border border-zinc-200 rounded-xl overflow-hidden bg-white">
+                <div className="px-4 py-2.5 border-b border-zinc-100 bg-zinc-50">
+                  <p className="text-xs font-medium text-zinc-700">
+                    {areaResults.length} recent sales near{" "}
+                    {areaQuery} — click to use as comparable
+                  </p>
+                </div>
+                <ul className="divide-y divide-zinc-50 max-h-80 overflow-y-auto">
+                  {areaResults.map((r) => (
+                    <li key={r.id}>
+                      <button
+                        type="button"
+                        onClick={() => applyAreaResult(r)}
+                        className="w-full text-left px-4 py-3 hover:bg-zinc-50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-zinc-900 truncate">
+                              {r.address}
+                            </p>
+                            <p className="text-xs text-zinc-500 mt-0.5">
+                              {r.county}
+                              {r.description ? " · " + r.description : ""}
+                              {" · "}
+                              <span className="text-zinc-400">
+                                {r.distance_km.toFixed(2)}km away
+                              </span>
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-sm font-semibold text-zinc-900 tabular-nums">
+                              €{Number(r.price).toLocaleString("en-IE")}
+                            </p>
+                            <p className="text-xs text-zinc-500 tabular-nums">
+                              {new Date(r.sale_date).toLocaleDateString("en-IE", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })}
                             </p>
                           </div>
                         </div>
@@ -858,7 +883,6 @@ export default function ComparableForm({
               </div>
             )}
           </div>
-          )}
 
           <div>
             <label htmlFor="transaction_type" className={labelClass}>

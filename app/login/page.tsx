@@ -91,22 +91,29 @@ export default function LoginPage() {
       className="min-h-screen bg-[#f5f5f4] flex items-center 
                     justify-center px-4"
     >
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <h1
-            className="text-xl font-semibold text-zinc-900 
-                         tracking-tight"
-          >
-            RedBook Pro
-          </h1>
-          <p className="text-sm text-zinc-500 mt-1">
-            {mode === "login"
-              ? "Sign in to your account"
-              : "Create your account"}
-          </p>
+      <div className="w-full max-w-lg flex flex-col items-center">
+        <div className="relative mb-4 pr-16 pt-8">
+          <img
+            src="/logo.png"
+            alt=""
+            className="absolute right-0 -top-2 h-24 w-24 object-contain"
+          />
+          <div className="flex items-baseline">
+            <span className="text-5xl font-bold text-zinc-800 tracking-tight">
+              RedBook
+            </span>
+            <span className="text-5xl font-light text-zinc-800 tracking-tight ml-2">
+              Pro
+            </span>
+          </div>
         </div>
+        <p className="text-sm text-zinc-500 text-center mb-8">
+          {mode === "login"
+            ? "Sign in to your account"
+            : "Create your account"}
+        </p>
 
-        <div className={`${card} p-6`}>
+        <div className={`${card} p-6 w-full max-w-sm`}>
           <form
             onSubmit={mode === "login" ? handleLogin : handleSignUp}
             className="space-y-4"

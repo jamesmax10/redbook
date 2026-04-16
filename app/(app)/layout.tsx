@@ -1,3 +1,4 @@
+import Link from "next/link";
 import NavLink from "./NavLink";
 import SignOutButton from "./components/SignOutButton";
 
@@ -10,11 +11,17 @@ export default function AppLayout({
     <>
       {/* Sidebar */}
       <aside className="fixed left-0 top-0 h-screen w-56 z-30 bg-zinc-950 flex flex-col">
-        <div className="px-5 py-5 border-b border-zinc-800">
-          <span className="text-white font-semibold text-[15px] tracking-tight">
-            RedBook Pro
+        <Link
+          href="/"
+          className="flex items-center gap-2 px-5 py-4 border-b border-zinc-800 hover:bg-zinc-900 transition-colors"
+        >
+          <span className="text-white font-bold text-sm tracking-wide">
+            RedBook
           </span>
-        </div>
+          <span className="text-red-500 font-bold text-sm tracking-wide">
+            Pro
+          </span>
+        </Link>
 
         <nav className="flex-1 py-4 space-y-1">
           <NavLink href="/">
