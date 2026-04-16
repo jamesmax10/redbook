@@ -19,8 +19,8 @@ export const dynamic = "force-dynamic";
 
 function SectionHeading({ number, title }: { number: number; title: string }) {
   return (
-    <div className="mb-6">
-      <p className={`${overline} mb-1`}>Section {number}</p>
+    <div className="border-l-2 border-red-500 pl-3 mb-4">
+      <p className={overline}>Section {number}</p>
       <h2 className={sectionTitle}>{title}</h2>
     </div>
   );
@@ -93,7 +93,7 @@ export default async function ReportPage({
   const comparableCount = comparables?.length ?? 0;
 
   return (
-    <div>
+    <div className="max-w-2xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
         <Link href={`/cases/${id}`} className={backLink}>
           &larr; Back to Case
@@ -333,7 +333,7 @@ export default async function ReportPage({
         <section>
           <SectionHeading number={4} title="Valuation Conclusion" />
           {valuation?.adopted_rate_per_sqm != null ? (
-            <div className={`${card} px-6 py-6`}>
+            <div className="bg-zinc-50 border border-zinc-100 rounded-2xl px-6 py-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                   <p className="text-xs text-zinc-400 mb-1">
@@ -354,11 +354,11 @@ export default async function ReportPage({
               </div>
 
               {property?.gross_internal_area != null && (
-                <div className="mt-6 pt-6 border-t border-zinc-50">
+                <div className="mt-6 pt-6 border-t border-zinc-200">
                   <p className="text-xs text-zinc-400 mb-1">
                     Implied Valuation
                   </p>
-                  <p className="text-3xl font-semibold tracking-tight text-zinc-900 tabular-nums">
+                  <p className="text-4xl font-bold text-zinc-900 tabular-nums">
                     &euro;
                     {fmtCurrency(
                       valuation.adopted_rate_per_sqm *

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef, Fragment } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import { saveAdjustments, updateComparable } from "@/app/actions";
 import { FACTOR_OPTIONS, type Adjustment } from "@/lib/types";
 import { fmtCurrency } from "@/lib/format";
@@ -197,45 +197,57 @@ export default function ComparableRow({ comp, caseId, redirectStep }: Props) {
   }
 
   return (
-    <Fragment>
-      <tr className="border-b border-zinc-50 last:border-0 align-top hover:bg-zinc-50/50 transition-colors">
-        <td className="px-4 py-3.5 font-medium text-zinc-900">
+    <div className="bg-white border border-zinc-200 rounded-xl p-4 mb-3 hover:border-zinc-300 hover:shadow-sm transition-all">
+      {successMsg && (
+        <div className="mb-3 flex items-center gap-2 rounded-lg bg-emerald-50/80 px-3.5 py-2 ring-1 ring-emerald-200/60 text-sm text-emerald-700">
+          <span>{"\u2713"}</span>
+          <span>{successMsg}</span>
+        </div>
+      )}
+
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <p className="text-sm font-medium text-zinc-900 leading-snug flex-1">
           {comp.address}
-        </td>
-        <td className="px-4 py-3.5 text-zinc-400">{comp.transaction_type}</td>
-        <td className="px-4 py-3.5 text-zinc-400 tabular-nums">
-          {comp.transaction_date}
-        </td>
-        <td className="px-4 py-3.5 text-zinc-500 text-right tabular-nums">
-          {"\u20AC"}
-          {fmtCurrency(comp.rate_per_sqm)}
-        </td>
-        <td className="px-4 py-3.5 text-right tabular-nums font-semibold text-zinc-900">
-          {"\u20AC"}{fmtCurrency(comp.adjusted_rate_per_sqm ?? comp.rate_per_sqm)}
-        </td>
-        <td className="px-4 py-3.5 text-right tabular-nums text-zinc-500">
-          {deltaPct != null
-            ? `${deltaPct >= 0 ? "+" : ""}${deltaPct.toFixed(1)}%`
-            : "\u2014"}
-        </td>
-        <td className="px-4 py-3.5 text-xs max-w-[140px]">
+        </p>
+        <div className="text-right shrink-0">
+          <p className="text-base font-semibold text-zinc-900 tabular-nums">
+            {"\u20AC"}{fmtCurrency(comp.adjusted_rate_per_sqm ?? comp.rate_per_sqm)}/m²
+          </p>
+          {comp.adjusted_rate_per_sqm != null &&
+           comp.adjusted_rate_per_sqm !== Number(comp.rate_per_sqm) && (
+            <p className="text-xs text-zinc-400 tabular-nums">
+              Base: {"\u20AC"}{fmtCurrency(comp.rate_per_sqm)}/m²
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-zinc-400">{comp.transaction_type}</span>
+          <span className="text-xs text-zinc-400 tabular-nums">{comp.transaction_date}</span>
+          {deltaPct != null && (
+            <span className={`text-xs font-medium tabular-nums ${
+              deltaPct > 0 ? "text-emerald-600" : deltaPct < 0 ? "text-red-500" : "text-zinc-400"
+            }`}>
+              {deltaPct >= 0 ? "+" : ""}{deltaPct.toFixed(1)}%
+            </span>
+          )}
           <button
             type="button"
             onClick={() => { setExpanded(!expanded); setEditing(false); }}
-            className="flex items-center gap-1.5 text-zinc-400 hover:text-zinc-700 transition-colors"
+            className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-700 transition-colors"
           >
             <span
               className="inline-block transition-transform text-[10px]"
-              style={{
-                transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
-              }}
+              style={{ transform: expanded ? "rotate(90deg)" : "rotate(0deg)" }}
             >
               &#9654;
             </span>
             <span>{adjSummary ?? "No adjustments"}</span>
           </button>
-        </td>
-        <td className="px-2 py-3.5 text-center w-8">
+        </div>
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={editing ? cancelEditing : startEditing}
@@ -244,27 +256,13 @@ export default function ComparableRow({ comp, caseId, redirectStep }: Props) {
           >
             {editing ? "\u2715" : "\u270E"}
           </button>
-        </td>
-        <td className="px-2 py-3.5 text-center w-8">
           <DeleteComparableButton comparableId={comp.id} caseId={caseId} redirectStep={redirectStep} />
-        </td>
-      </tr>
-
-      {successMsg && (
-        <tr className="border-b border-zinc-50">
-          <td colSpan={9} className="px-4 py-2">
-            <div className="flex items-center gap-2 rounded-lg bg-emerald-50/80 px-3.5 py-2 ring-1 ring-emerald-200/60 text-sm text-emerald-700">
-              <span>{"\u2713"}</span>
-              <span>{successMsg}</span>
-            </div>
-          </td>
-        </tr>
-      )}
+        </div>
+      </div>
 
       {editing && (
-        <tr className="border-b border-zinc-50">
-          <td colSpan={9} className="pb-4 pt-1 px-4">
-            <div className="bg-zinc-50/80 rounded-lg p-4 space-y-4">
+        <div className="mt-4 pt-4 border-t border-zinc-100">
+          <div className="bg-zinc-50/80 rounded-lg p-4 space-y-4">
               {editErrors.length > 0 && (
                 <div className="rounded-xl bg-red-50/80 px-4 py-3 ring-1 ring-red-200/60">
                   <ul className="space-y-1">
@@ -429,14 +427,12 @@ export default function ComparableRow({ comp, caseId, redirectStep }: Props) {
                 </button>
               </div>
             </div>
-          </td>
-        </tr>
+          </div>
       )}
 
       {expanded && !editing && (
-        <tr className="border-b border-zinc-50">
-          <td colSpan={9} className="pb-4 pt-1 px-4">
-            <div className="bg-zinc-50/80 rounded-lg p-4 space-y-3">
+        <div className="mt-4 pt-4 border-t border-zinc-100">
+          <div className="bg-zinc-50/80 rounded-lg p-4 space-y-3">
               {adjustments.map((adj, i) => (
                 <div
                   key={i}
@@ -527,10 +523,9 @@ export default function ComparableRow({ comp, caseId, redirectStep }: Props) {
                   {isPending ? "Saving\u2026" : "Save Adjustments"}
                 </button>
               )}
-            </div>
-          </td>
-        </tr>
+          </div>
+        </div>
       )}
-    </Fragment>
+    </div>
   );
 }

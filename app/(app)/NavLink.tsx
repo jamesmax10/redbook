@@ -18,8 +18,8 @@ export default function NavLink({
       href={href}
       className={`flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm font-medium transition-colors ${
         isActive
-          ? "text-white bg-zinc-800"
-          : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+          ? "text-white bg-[#363B52]"
+          : "text-[#9CA3AF] hover:text-white hover:bg-[#363B52]"
       }`}
     >
       {children}

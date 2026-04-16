@@ -7,9 +7,7 @@ import type { Adjustment } from "@/lib/types";
 import {
   inputClass,
   btnPrimary,
-  card,
   labelClass,
-  thClass,
   backLink,
 } from "@/lib/styles";
 import {
@@ -95,7 +93,7 @@ function ProgressBar({
   caseId: string;
 }) {
   return (
-    <nav className="mb-10" aria-label="Workflow progress">
+    <nav className="mb-8" aria-label="Workflow progress">
       <ol className="flex items-center">
         {STEPS.map((step, i) => {
           const isComplete = completedSteps.has(step.num);
@@ -291,59 +289,45 @@ export default async function CaseDetailPage({
 
   return (
     <div>
-      {/* Back to dashboard */}
-      <div className="mb-6">
-        <Link href="/" className={backLink}>
-          &larr; Back to Dashboard
-        </Link>
-      </div>
-
-      {/* Header card */}
-      <div className={`${card} px-6 py-5 mb-2`}>
-        <div className="flex items-start justify-between gap-4">
+      {/* Slim header bar */}
+      <div className="flex items-center justify-between mb-6 pb-4 border-b border-zinc-200">
+        <div className="flex items-center gap-3 min-w-0">
           <div className="min-w-0">
-            <div className="flex items-center gap-3">
-              <h1 className="text-xl font-semibold tracking-tight text-zinc-900 truncate">
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-semibold text-zinc-900 truncate">
                 {caseData.client_name}
               </h1>
               <span
-                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 ${overallBadge.className}`}
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium shrink-0 ${overallBadge.className}`}
               >
                 {overallBadge.label}
               </span>
             </div>
-            <p className="text-sm text-zinc-400 mt-1 truncate">
+            <p className="text-xs text-zinc-400 truncate mt-0.5">
               {caseData.property_address}
             </p>
-            <div className="flex items-center gap-2 mt-3 flex-wrap">
-              {caseData.purpose && (
-                <span className="text-xs text-zinc-500 bg-zinc-100 rounded-full px-2.5 py-0.5">
-                  {caseData.purpose}
-                </span>
-              )}
-              {caseData.basis_of_value && (
-                <span className="text-xs text-zinc-500 bg-zinc-100 rounded-full px-2.5 py-0.5">
-                  {caseData.basis_of_value}
-                </span>
-              )}
-              {caseData.valuation_date && (
-                <span className="text-xs text-zinc-500 bg-zinc-100 rounded-full px-2.5 py-0.5 tabular-nums">
-                  {caseData.valuation_date}
-                </span>
-              )}
-            </div>
           </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {caseData.purpose && (
+            <span className="text-xs text-zinc-400 bg-zinc-100 rounded-full px-2 py-0.5">
+              {caseData.purpose}
+            </span>
+          )}
+          {caseData.valuation_date && (
+            <span className="text-xs text-zinc-400 tabular-nums">
+              {caseData.valuation_date}
+            </span>
+          )}
         </div>
       </div>
 
       {/* Progress bar */}
-      <div className="mt-8">
-        <ProgressBar
-          currentStep={currentStep}
-          completedSteps={completed}
-          caseId={id}
-        />
-      </div>
+      <ProgressBar
+        currentStep={currentStep}
+        completedSteps={completed}
+        caseId={id}
+      />
 
       {/* ── Step 1: Case Details ───────────────────────────────── */}
       {currentStep === 1 && (
@@ -355,89 +339,91 @@ export default async function CaseDetailPage({
             Enter the core details for this valuation case.
           </p>
 
-          <form action={updateCaseWithId} className="max-w-2xl space-y-4">
+          <form action={updateCaseWithId} className="max-w-2xl">
             <input type="hidden" name="_step" value="2" />
 
-            <div>
-              <label htmlFor="client_name" className={labelClass}>
-                Client Name
-              </label>
-              <input
-                type="text"
-                id="client_name"
-                name="client_name"
-                required
-                defaultValue={caseData.client_name}
-                className={inputClass}
-              />
-            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label htmlFor="client_name" className={labelClass}>
+                  Client Name
+                </label>
+                <input
+                  type="text"
+                  id="client_name"
+                  name="client_name"
+                  required
+                  defaultValue={caseData.client_name}
+                  className={inputClass}
+                />
+              </div>
 
-            <div>
-              <label htmlFor="property_address" className={labelClass}>
-                Property Address
-              </label>
-              <input
-                type="text"
-                id="property_address"
-                name="property_address"
-                required
-                defaultValue={caseData.property_address}
-                className={inputClass}
-              />
-            </div>
+              <div className="col-span-2">
+                <label htmlFor="property_address" className={labelClass}>
+                  Property Address
+                </label>
+                <input
+                  type="text"
+                  id="property_address"
+                  name="property_address"
+                  required
+                  defaultValue={caseData.property_address}
+                  className={inputClass}
+                />
+              </div>
 
-            <div>
-              <label htmlFor="valuation_date" className={labelClass}>
-                Valuation Date
-              </label>
-              <input
-                type="date"
-                id="valuation_date"
-                name="valuation_date"
-                required
-                defaultValue={caseData.valuation_date}
-                className={inputClass}
-              />
-            </div>
+              <div>
+                <label htmlFor="valuation_date" className={labelClass}>
+                  Valuation Date
+                </label>
+                <input
+                  type="date"
+                  id="valuation_date"
+                  name="valuation_date"
+                  required
+                  defaultValue={caseData.valuation_date}
+                  className={inputClass}
+                />
+              </div>
 
-            <div>
-              <label htmlFor="purpose" className={labelClass}>
-                Purpose
-              </label>
-              <select
-                id="purpose"
-                name="purpose"
-                required
-                defaultValue={caseData.purpose}
-                className={inputClass}
-              >
-                <option value="">Select purpose...</option>
-                {PURPOSE_OPTIONS.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <div>
+                <label htmlFor="purpose" className={labelClass}>
+                  Purpose
+                </label>
+                <select
+                  id="purpose"
+                  name="purpose"
+                  required
+                  defaultValue={caseData.purpose}
+                  className={inputClass}
+                >
+                  <option value="">Select purpose...</option>
+                  {PURPOSE_OPTIONS.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div>
-              <label htmlFor="basis_of_value" className={labelClass}>
-                Basis of Value
-              </label>
-              <select
-                id="basis_of_value"
-                name="basis_of_value"
-                required
-                defaultValue={caseData.basis_of_value}
-                className={inputClass}
-              >
-                <option value="">Select basis...</option>
-                {BASIS_OPTIONS.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
+              <div className="col-span-2">
+                <label htmlFor="basis_of_value" className={labelClass}>
+                  Basis of Value
+                </label>
+                <select
+                  id="basis_of_value"
+                  name="basis_of_value"
+                  required
+                  defaultValue={caseData.basis_of_value}
+                  className={inputClass}
+                >
+                  <option value="">Select basis...</option>
+                  {BASIS_OPTIONS.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="flex items-center justify-between pt-6 mt-6 border-t border-zinc-100">
@@ -462,99 +448,101 @@ export default async function CaseDetailPage({
             Describe the property being valued.
           </p>
 
-          <form action={savePropertyForCase} className="max-w-2xl space-y-4">
+          <form action={savePropertyForCase} className="max-w-2xl">
             <input type="hidden" name="_step" value="3" />
 
-            <div>
-              <label htmlFor="address" className={labelClass}>
-                Address
-              </label>
-              <input
-                type="text"
-                id="address"
-                name="address"
-                required
-                defaultValue={
-                  property?.address ?? caseData.property_address ?? ""
-                }
-                className={inputClass}
-              />
-            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label htmlFor="address" className={labelClass}>
+                  Address
+                </label>
+                <input
+                  type="text"
+                  id="address"
+                  name="address"
+                  required
+                  defaultValue={
+                    property?.address ?? caseData.property_address ?? ""
+                  }
+                  className={inputClass}
+                />
+              </div>
 
-            <div>
-              <label htmlFor="property_type" className={labelClass}>
-                Property Type
-              </label>
-              <select
-                id="property_type"
-                name="property_type"
-                required
-                defaultValue={property?.property_type ?? ""}
-                className={inputClass}
-              >
-                <option value="">Select type...</option>
-                {PROPERTY_TYPE_OPTIONS.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <div>
+                <label htmlFor="property_type" className={labelClass}>
+                  Property Type
+                </label>
+                <select
+                  id="property_type"
+                  name="property_type"
+                  required
+                  defaultValue={property?.property_type ?? ""}
+                  className={inputClass}
+                >
+                  <option value="">Select type...</option>
+                  {PROPERTY_TYPE_OPTIONS.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div>
-              <label htmlFor="gross_internal_area" className={labelClass}>
-                Gross Internal Area (sq m)
-              </label>
-              <input
-                type="number"
-                id="gross_internal_area"
-                name="gross_internal_area"
-                required
-                step="0.01"
-                min="0"
-                defaultValue={property?.gross_internal_area ?? ""}
-                className={inputClass}
-              />
-            </div>
+              <div>
+                <label htmlFor="condition" className={labelClass}>
+                  Condition
+                </label>
+                <select
+                  id="condition"
+                  name="condition"
+                  required
+                  defaultValue={property?.condition ?? ""}
+                  className={inputClass}
+                >
+                  <option value="">Select condition...</option>
+                  {CONDITION_OPTIONS.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div>
-              <label htmlFor="condition" className={labelClass}>
-                Condition
-              </label>
-              <select
-                id="condition"
-                name="condition"
-                required
-                defaultValue={property?.condition ?? ""}
-                className={inputClass}
-              >
-                <option value="">Select condition...</option>
-                {CONDITION_OPTIONS.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <div>
+                <label htmlFor="gross_internal_area" className={labelClass}>
+                  Gross Internal Area (sq m)
+                </label>
+                <input
+                  type="number"
+                  id="gross_internal_area"
+                  name="gross_internal_area"
+                  required
+                  step="0.01"
+                  min="0"
+                  defaultValue={property?.gross_internal_area ?? ""}
+                  className={inputClass}
+                />
+              </div>
 
-            <div>
-              <label htmlFor="tenure" className={labelClass}>
-                Tenure
-              </label>
-              <select
-                id="tenure"
-                name="tenure"
-                required
-                defaultValue={property?.tenure ?? ""}
-                className={inputClass}
-              >
-                <option value="">Select tenure...</option>
-                {TENURE_OPTIONS.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
+              <div>
+                <label htmlFor="tenure" className={labelClass}>
+                  Tenure
+                </label>
+                <select
+                  id="tenure"
+                  name="tenure"
+                  required
+                  defaultValue={property?.tenure ?? ""}
+                  className={inputClass}
+                >
+                  <option value="">Select tenure...</option>
+                  {TENURE_OPTIONS.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="flex items-center justify-between pt-6 mt-6 border-t border-zinc-100">
@@ -586,89 +574,75 @@ export default async function CaseDetailPage({
                 : "Add at least 2 comparables to proceed."}
           </p>
 
-          <ComparableForm
-            action={addComparableForCase}
-            redirectStep="3"
-            existingComparables={(comparables ?? []).map((c: { address: string; price_or_rent: number; gross_internal_area: number }) => ({
-              address: c.address,
-              price_or_rent: c.price_or_rent,
-              gross_internal_area: c.gross_internal_area,
-            }))}
-            justAdded={comparableAdded}
-            defaultTransactionType={lastTransactionType}
-          />
+          <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6 items-start">
+            {/* LEFT — Add comparable */}
+            <div className="bg-white border border-zinc-200 rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-zinc-900 mb-4">
+                Add Comparable
+              </h3>
+              <ComparableForm
+                action={addComparableForCase}
+                redirectStep="3"
+                existingComparables={(comparables ?? []).map((c: { address: string; price_or_rent: number; gross_internal_area: number }) => ({
+                  address: c.address,
+                  price_or_rent: c.price_or_rent,
+                  gross_internal_area: c.gross_internal_area,
+                }))}
+                justAdded={comparableAdded}
+                defaultTransactionType={lastTransactionType}
+              />
+            </div>
 
-          <div className="mt-8">
-            {comparables && comparables.length > 0 ? (
-              <div className={`${card} overflow-hidden`}>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-zinc-100">
-                        <th className={`text-left px-4 py-3 ${thClass}`}>
-                          Address
-                        </th>
-                        <th className={`text-left px-4 py-3 ${thClass}`}>
-                          Type
-                        </th>
-                        <th className={`text-left px-4 py-3 ${thClass}`}>
-                          Date
-                        </th>
-                        <th className={`text-right px-4 py-3 ${thClass}`}>
-                          &euro;/sq&nbsp;m
-                        </th>
-                        <th
-                          className={`text-right px-4 py-3 ${thClass} !text-zinc-900`}
-                        >
-                          Adj. &euro;/sq&nbsp;m
-                        </th>
-                        <th className={`text-right px-4 py-3 ${thClass}`}>
-                          &Delta;&nbsp;%
-                        </th>
-                        <th className={`text-left px-4 py-3 ${thClass}`}>
-                          Adjustments
-                        </th>
-                        <th className="px-2 py-3 w-8"></th>
-                        <th className="px-2 py-3 w-8"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {comparables.map(
-                        (comp: {
-                          id: string;
-                          address: string;
-                          transaction_type: string;
-                          transaction_date: string;
-                          price_or_rent: number;
-                          gross_internal_area: number;
-                          rate_per_sqm: number;
-                          adjustments: Adjustment[] | null;
-                          adjusted_rate_per_sqm: number | null;
-                        }) => (
-                          <ComparableRow
-                            key={comp.id}
-                            comp={comp}
-                            caseId={id}
-                            redirectStep="3"
-                          />
-                        )
-                      )}
-                    </tbody>
-                  </table>
+            {/* RIGHT — Evidence panel */}
+            <div>
+              <h3 className="text-sm font-semibold text-zinc-900 mb-4">
+                Evidence
+                <span className="ml-2 text-zinc-400 font-normal">
+                  ({comparables?.length ?? 0})
+                </span>
+              </h3>
+              {comparables && comparables.length > 0 ? (
+                <div>
+                  {comparables.map(
+                    (comp: {
+                      id: string;
+                      address: string;
+                      transaction_type: string;
+                      transaction_date: string;
+                      price_or_rent: number;
+                      gross_internal_area: number;
+                      rate_per_sqm: number;
+                      adjustments: Adjustment[] | null;
+                      adjusted_rate_per_sqm: number | null;
+                    }) => (
+                      <ComparableRow
+                        key={comp.id}
+                        comp={comp}
+                        caseId={id}
+                        redirectStep="3"
+                      />
+                    )
+                  )}
                 </div>
-              </div>
-            ) : (
-              <p className="text-sm text-zinc-400">
-                No comparables added yet. Use the form above to add comparable
-                evidence.
-              </p>
-            )}
+              ) : (
+                <div className="border-2 border-dashed border-zinc-200 rounded-xl p-10 text-center">
+                  <p className="text-sm text-zinc-400 mb-1">
+                    No comparables added yet
+                  </p>
+                  <p className="text-xs text-zinc-300">
+                    Use PPR Smart Search on the left to find and add comparable evidence
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
-          <ComparableStepNav
-            caseId={id}
-            comparableCount={comparables?.length ?? 0}
-          />
+          <div className="mt-6">
+            <ComparableStepNav
+              caseId={id}
+              comparableCount={comparables?.length ?? 0}
+            />
+          </div>
         </section>
       )}
 
@@ -740,39 +714,39 @@ export default async function CaseDetailPage({
             </div>
           )}
 
-          {/* Checklist */}
-          <div className={`${card} divide-y divide-zinc-100`}>
+          {/* Checklist — compact 3-card layout */}
+          <div className="grid grid-cols-3 gap-4 mb-8">
             {(["case", "comparables", "valuation"] as Section[]).map(
               (section) => {
                 const sectionChecks = validation.checks.filter(
                   (c) => c.section === section
                 );
                 return (
-                  <div key={section} className="px-5 py-4">
-                    <div className="flex items-center gap-2 mb-2">
+                  <div
+                    key={section}
+                    className="bg-white border border-zinc-200 rounded-xl p-4"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-medium text-zinc-900">
+                        {SECTION_LABELS[section]}
+                      </span>
                       <span>
                         {SEVERITY_ICON[validation.sections[section].severity]}
                       </span>
-                      <h3 className="text-sm font-semibold text-zinc-800">
-                        {SECTION_LABELS[section]}
-                      </h3>
                     </div>
-                    <ul className="space-y-1 pl-7">
+                    <ul className="space-y-1">
                       {sectionChecks.map((check) => {
                         const color =
                           check.severity === "pass"
-                            ? "text-emerald-700"
+                            ? "text-emerald-600"
                             : check.severity === "warning"
-                              ? "text-amber-700"
-                              : "text-red-600";
+                              ? "text-amber-600"
+                              : "text-red-500";
                         return (
                           <li
                             key={check.message}
-                            className={`flex items-center gap-2 text-sm ${color}`}
+                            className={`text-xs ${color}`}
                           >
-                            <span className="text-xs">
-                              {SEVERITY_ICON[check.severity]}
-                            </span>
                             {check.message}
                           </li>
                         );

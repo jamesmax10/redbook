@@ -101,10 +101,10 @@ export default function ValuationSection({
           </div>
         )}
 
-        <form action={boundAction} className="max-w-xl">
+        <form action={boundAction} className="max-w-2xl">
           {nextStep && <input type="hidden" name="_step" value={nextStep} />}
-          <div className="space-y-4">
-            <div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
               <label htmlFor="adopted_rate_per_sqm" className={labelClass}>
                 Adopted Rate per sq&nbsp;m (&euro;)
               </label>
@@ -119,7 +119,7 @@ export default function ValuationSection({
               />
             </div>
 
-            <div>
+            <div className="col-span-2">
               <label htmlFor="adopted_rate_rationale" className={labelClass}>
                 Rationale
               </label>
@@ -140,7 +140,7 @@ export default function ValuationSection({
               <textarea
                 id="assumptions"
                 name="assumptions"
-                rows={3}
+                rows={2}
                 defaultValue={valuation?.assumptions ?? ""}
                 className={inputClass}
                 placeholder="State assumptions underpinning this valuation..."
@@ -154,14 +154,14 @@ export default function ValuationSection({
               <textarea
                 id="limiting_conditions"
                 name="limiting_conditions"
-                rows={3}
+                rows={2}
                 defaultValue={valuation?.limiting_conditions ?? ""}
                 className={inputClass}
                 placeholder="Describe any limiting conditions..."
               />
             </div>
 
-            <div>
+            <div className="col-span-2">
               <label htmlFor="valuer_name" className={labelClass}>
                 Valuer Name
               </label>
@@ -175,7 +175,7 @@ export default function ValuationSection({
               />
             </div>
 
-            <div className="pt-2">
+            <div className="col-span-2 pt-2">
               <button type="submit" className={btnPrimary}>
                 {nextStep
                   ? "Save & Continue"

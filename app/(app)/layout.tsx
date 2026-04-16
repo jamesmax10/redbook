@@ -10,17 +10,16 @@ export default function AppLayout({
   return (
     <>
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-screen w-56 z-30 bg-zinc-950 flex flex-col">
+      <aside className="fixed left-0 top-0 h-screen w-52 z-30 bg-[#2D3142] flex flex-col">
         <Link
           href="/"
-          className="flex items-center gap-2 px-5 py-4 border-b border-zinc-800 hover:bg-zinc-900 transition-colors"
+          className="flex items-center px-4 py-3 border-b border-[#3D4260] hover:bg-[#363B52] transition-colors"
         >
-          <span className="text-white font-bold text-sm tracking-wide">
-            RedBook
-          </span>
-          <span className="text-red-500 font-bold text-sm tracking-wide">
-            Pro
-          </span>
+          <img
+            src="/logo.png"
+            alt="RedBook Pro"
+            className="h-7 w-auto brightness-0 invert opacity-90"
+          />
         </Link>
 
         <nav className="flex-1 py-4 space-y-1">
@@ -47,15 +46,15 @@ export default function AppLayout({
           </NavLink>
         </nav>
 
-        <div className="border-t border-zinc-800 px-3 py-4 space-y-1">
-          <p className="text-xs text-zinc-600 px-2 mb-2">RedBook Pro v0.1</p>
+        <div className="border-t border-[#3D4260] px-3 py-4 space-y-1">
+          <p className="text-xs text-[#6B7280] px-2 mb-2">RedBook Pro v0.1</p>
           <SignOutButton />
         </div>
       </aside>
 
       {/* Main content */}
-      <main className="ml-56 min-h-screen">
-        <div className="max-w-4xl mx-auto px-8 py-10">
+      <main className="ml-52 min-h-screen">
+        <div className="max-w-3xl mx-auto px-8 py-8">
           {children}
         </div>
       </main>

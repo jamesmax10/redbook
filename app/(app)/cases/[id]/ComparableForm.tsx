@@ -12,9 +12,10 @@ import {
   btnDashed,
   btnRemove,
   card,
-  labelClass,
   overline,
 } from "@/lib/styles";
+
+const formLabel = "block text-xs font-medium text-zinc-500 mb-1";
 
 const TRANSACTION_TYPE_OPTIONS = [
   "Sale",
@@ -553,49 +554,9 @@ export default function ComparableForm({
         id="comparable-form"
         action={action}
         onSubmit={handleSubmit}
-        className="space-y-5"
+        className="space-y-4"
       >
         {redirectStep && <input type="hidden" name="_step" value={redirectStep} />}
-
-        {/* Paste + Extract */}
-        <div className="rounded-lg bg-zinc-50 p-4">
-          <label htmlFor="paste_listing" className={labelClass}>
-            Paste listing text or URL
-          </label>
-          <textarea
-            ref={pasteRef}
-            id="paste_listing"
-            rows={2}
-            value={pasteText}
-            onChange={(e) => {
-              setPasteText(e.target.value);
-              if (extractMsg) setExtractMsg(null);
-              if (showAdded) setShowAdded(false);
-            }}
-            placeholder="Paste from Daft, BidX1, or any listing — URL or text"
-            className={inputClass + " resize-y"}
-            autoFocus={justAdded}
-          />
-          <button
-            type="button"
-            onClick={handleExtract}
-            disabled={!pasteText.trim() || urlLoading}
-            className={btnSecondary + " mt-2"}
-          >
-            {urlLoading ? "Importing…" : "Extract Details"}
-          </button>
-          {extractMsg && (
-            <div
-              className={`mt-2 rounded-lg px-3 py-2 text-sm ${
-                extractMsg.type === "warning"
-                  ? "bg-amber-50 text-amber-800 ring-1 ring-amber-200/60"
-                  : "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200/60"
-              }`}
-            >
-              {extractMsg.text}
-            </div>
-          )}
-        </div>
 
         {errors.length > 0 && (
           <div className="rounded-xl bg-red-50/80 px-4 py-3 ring-1 ring-red-200/60">
@@ -613,12 +574,11 @@ export default function ComparableForm({
           </div>
         )}
 
-        {/* Fields — compact grid for core fields */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="sm:col-span-2">
-            <label className={labelClass}>
+        {/* PPR Smart Search */}
+        <div>
+          <label className={formLabel}>
               <span>Property Search</span>
-              <span className="ml-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-violet-50 text-violet-700 border border-violet-200">
+              <span className="ml-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2L13.09 8.26L19 6L14.74 10.74L21 12L14.74 13.26L19 18L13.09 15.74L12 22L10.91 15.74L5 18L9.26 13.26L3 12L9.26 10.74L5 6L10.91 8.26L12 2Z"/>
                 </svg>
@@ -637,7 +597,7 @@ export default function ComparableForm({
                   }}
                   className={`flex-1 px-4 py-3 text-sm font-medium transition-all ${
                     searchMode === "address"
-                      ? "bg-white text-zinc-900 shadow-sm border-b-2 border-b-violet-500"
+                      ? "bg-white text-zinc-900 shadow-sm border-b-2 border-b-teal-500"
                       : "text-zinc-400 hover:text-zinc-600"
                   }`}
                 >
@@ -652,7 +612,7 @@ export default function ComparableForm({
                   }}
                   className={`flex-1 px-4 py-3 text-sm font-medium transition-all ${
                     searchMode === "area"
-                      ? "bg-white text-zinc-900 shadow-sm border-b-2 border-b-violet-500"
+                      ? "bg-white text-zinc-900 shadow-sm border-b-2 border-b-teal-500"
                       : "text-zinc-400 hover:text-zinc-600"
                   }`}
                 >
@@ -680,9 +640,30 @@ export default function ComparableForm({
                         });
                       }}
                       placeholder="Search 779,547 PPR records by address..."
-                      className="w-full px-4 py-3 pr-12 rounded-xl border border-zinc-200 bg-zinc-50 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 focus:bg-white transition-all"
+                      className="w-full px-4 py-3 pr-16 rounded-xl border border-zinc-200 bg-zinc-50 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400 focus:bg-white transition-all"
                     />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-violet-400">
+                    {address && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          skipPprSearch.current = true;
+                          setAddress("");
+                          setPprResults([]);
+                          setPprUsed(false);
+                          setPprError(null);
+                          setFilledFields((s) => {
+                            const n = new Set(s);
+                            n.delete("address");
+                            return n;
+                          });
+                        }}
+                        className="absolute right-8 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-zinc-500 transition-colors text-base leading-none px-1"
+                        aria-label="Clear address"
+                      >
+                        ×
+                      </button>
+                    )}
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-teal-500">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 2L13.09 8.26L19 6L14.74 10.74L21 12L14.74 13.26L19 18L13.09 15.74L12 22L10.91 15.74L5 18L9.26 13.26L3 12L9.26 10.74L5 6L10.91 8.26L12 2Z"/>
                       </svg>
@@ -704,9 +685,9 @@ export default function ComparableForm({
                           }
                         }}
                         placeholder="e.g. Salthill, Galway"
-                        className="w-full px-4 py-3 pr-12 rounded-xl border border-zinc-200 bg-zinc-50 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 focus:bg-white transition-all"
+                        className="w-full px-4 py-3 pr-12 rounded-xl border border-zinc-200 bg-zinc-50 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400 focus:bg-white transition-all"
                       />
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-violet-400">
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-teal-500">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M12 2L13.09 8.26L19 6L14.74 10.74L21 12L14.74 13.26L19 18L13.09 15.74L12 22L10.91 15.74L5 18L9.26 13.26L3 12L9.26 10.74L5 6L10.91 8.26L12 2Z"/>
                         </svg>
@@ -882,10 +863,11 @@ export default function ComparableForm({
                 </ul>
               </div>
             )}
-          </div>
+        </div>
 
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <label htmlFor="transaction_type" className={labelClass}>
+            <label htmlFor="transaction_type" className={formLabel}>
               Transaction Type
             </label>
             <select
@@ -906,7 +888,7 @@ export default function ComparableForm({
           </div>
 
           <div>
-            <label htmlFor="transaction_date" className={labelClass}>
+            <label htmlFor="transaction_date" className={formLabel}>
               Transaction Date
             </label>
             <input
@@ -924,9 +906,11 @@ export default function ComparableForm({
               </p>
             )}
           </div>
+        </div>
 
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <label htmlFor="price_or_rent" className={labelClass}>
+            <label htmlFor="price_or_rent" className={formLabel}>
               Price / Rent (&euro;)
             </label>
             <input
@@ -948,7 +932,7 @@ export default function ComparableForm({
           </div>
 
           <div>
-            <label htmlFor="comp_gross_internal_area" className={labelClass}>
+            <label htmlFor="comp_gross_internal_area" className={formLabel}>
               Area (sq m)
             </label>
             <input
@@ -1130,6 +1114,46 @@ export default function ComparableForm({
             </button>
           </div>
         )}
+
+        <div className="border-t border-zinc-200 pt-4">
+          <div className="rounded-lg bg-zinc-50 border border-dashed border-zinc-200 p-4">
+            <label htmlFor="paste_listing" className={formLabel}>
+              Or paste from a listing
+            </label>
+            <textarea
+              ref={pasteRef}
+              id="paste_listing"
+              rows={2}
+              value={pasteText}
+              onChange={(e) => {
+                setPasteText(e.target.value);
+                if (extractMsg) setExtractMsg(null);
+                if (showAdded) setShowAdded(false);
+              }}
+              placeholder="Paste from Daft, BidX1, or any listing — URL or text"
+              className={inputClass + " resize-y"}
+            />
+            <button
+              type="button"
+              onClick={handleExtract}
+              disabled={!pasteText.trim() || urlLoading}
+              className={btnSecondary + " mt-2"}
+            >
+              {urlLoading ? "Importing…" : "Extract Details"}
+            </button>
+            {extractMsg && (
+              <div
+                className={`mt-2 rounded-lg px-3 py-2 text-sm ${
+                  extractMsg.type === "warning"
+                    ? "bg-amber-50 text-amber-800 ring-1 ring-amber-200/60"
+                    : "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200/60"
+                }`}
+              >
+                {extractMsg.text}
+              </div>
+            )}
+          </div>
+        </div>
       </form>
     </div>
   );

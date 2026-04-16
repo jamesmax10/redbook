@@ -21,8 +21,8 @@ export default function SignOutButton() {
     <button
       onClick={handleSignOut}
       className="flex items-center gap-2 w-full text-left text-sm
-                 text-zinc-500 hover:text-white transition-colors 
-                 px-2 py-1.5 rounded-lg hover:bg-zinc-800"
+                 text-[#9CA3AF] hover:text-white transition-colors 
+                 px-2 py-1.5 rounded-lg hover:bg-[#363B52]"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

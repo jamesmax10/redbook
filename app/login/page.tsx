@@ -92,22 +92,14 @@ export default function LoginPage() {
                     justify-center px-4"
     >
       <div className="w-full max-w-lg flex flex-col items-center">
-        <div className="relative mb-4 pr-16 pt-8">
+        <div className="mb-10 flex flex-col items-center">
           <img
             src="/logo.png"
-            alt=""
-            className="absolute right-0 -top-2 h-24 w-24 object-contain"
+            alt="RedBook Pro"
+            style={{ height: "80px", width: "auto" }}
           />
-          <div className="flex items-baseline">
-            <span className="text-5xl font-bold text-zinc-800 tracking-tight">
-              RedBook
-            </span>
-            <span className="text-5xl font-light text-zinc-800 tracking-tight ml-2">
-              Pro
-            </span>
-          </div>
         </div>
-        <p className="text-sm text-zinc-500 text-center mb-8">
+        <p className="text-sm text-zinc-500 mb-8">
           {mode === "login"
             ? "Sign in to your account"
             : "Create your account"}
