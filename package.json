@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "import-ppr": "tsx scripts/import-ppr.ts"
+    "import-ppr": "tsx scripts/import-ppr.ts",
+    "geocode-ppr": "tsx scripts/geocode-ppr.ts",
+    "geocode-progress": "tsx scripts/check-geocoding-progress.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",

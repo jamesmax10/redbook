@@ -200,6 +200,20 @@ export default function ComparableForm({
   }>>([]);
   const [pprError, setPprError] = useState<string | null>(null);
   const [pprUsed, setPprUsed] = useState(false);
+  const [searchMode, setSearchMode] = useState<"address" | "area">("address");
+  const [areaQuery, setAreaQuery] = useState("");
+  const [areaLoading, setAreaLoading] = useState(false);
+  const [areaResults, setAreaResults] = useState<Array<{
+    id: string;
+    sale_date: string;
+    address: string;
+    county: string | null;
+    price: number;
+    description: string | null;
+    distance_km: number;
+  }>>([]);
+  const [areaError, setAreaError] = useState<string | null>(null);
+  const [areaName, setAreaName] = useState<string | null>(null);
   const skipDuplicateCheck = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
   const pasteRef = useRef<HTMLTextAreaElement>(null);
@@ -266,6 +280,65 @@ export default function ComparableForm({
     }, 400);
     return () => clearTimeout(timer);
   }, [address, handlePprSearch]);
+
+  async function handleAreaSearch() {
+    if (!areaQuery.trim() || areaQuery.trim().length < 3) return;
+    setAreaLoading(true);
+    setAreaError(null);
+    setAreaResults([]);
+    setAreaName(null);
+    try {
+      const res = await fetch("/api/ppr/area-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          area: areaQuery.trim(),
+          radiusKm: 1.5,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        setAreaError(json.error ?? "Search failed.");
+        return;
+      }
+      if (json.results.length === 0) {
+        setAreaError(
+          "No PPR sales found in this area. " +
+          "Try a nearby town or increase the search radius."
+        );
+        return;
+      }
+      setAreaResults(json.results);
+      setAreaName(json.area ?? null);
+    } catch {
+      setAreaError("Search failed. Check your connection.");
+    } finally {
+      setAreaLoading(false);
+    }
+  }
+
+  function applyAreaResult(result: {
+    sale_date: string;
+    address: string;
+    price: number;
+  }) {
+    setAddress(result.address);
+    setPriceOrRent(String(result.price));
+    setTransactionDate(result.sale_date);
+    setTransactionType("Sale");
+    setDateEstimated(false);
+    setAreaResults([]);
+    setPprUsed(true);
+    setFilledFields((s) => {
+      const n = new Set(s);
+      n.add("address");
+      n.add("price");
+      n.add("transactionDate");
+      n.add("transactionType");
+      return n;
+    });
+    setSearchMode("address");
+  }
 
   function applyExtracted(extracted: {
     address?: string;
@@ -536,8 +609,150 @@ export default function ComparableForm({
         {/* Fields — compact grid for core fields */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
+            <div className="flex items-center gap-1 p-1 bg-zinc-100 rounded-lg w-fit mb-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchMode("address");
+                  setAreaResults([]);
+                  setAreaError(null);
+                }}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  searchMode === "address"
+                    ? "bg-white text-zinc-900 shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-700"
+                }`}
+              >
+                Known address
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchMode("area");
+                  setPprResults([]);
+                  setPprError(null);
+                }}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  searchMode === "area"
+                    ? "bg-white text-zinc-900 shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-700"
+                }`}
+              >
+                Browse area sales
+              </button>
+            </div>
+          </div>
+
+          {searchMode === "area" && (
+            <div className="sm:col-span-2">
+              <label className={labelClass}>
+                <span>Search Area</span>
+                <span className="ml-2 inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 ring-1 ring-emerald-600/20 rounded-full px-2 py-0.5">
+                  PPR Smart Search
+                </span>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={areaQuery}
+                  onChange={(e) => setAreaQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAreaSearch();
+                    }
+                  }}
+                  placeholder="e.g. Salthill, Galway"
+                  className={inputClass}
+                />
+                <button
+                  type="button"
+                  onClick={handleAreaSearch}
+                  disabled={areaLoading || areaQuery.trim().length < 3}
+                  className={btnSecondary}
+                >
+                  {areaLoading ? "Searching..." : "Search"}
+                </button>
+              </div>
+
+              {areaLoading && (
+                <div className="mt-2 flex items-center gap-2.5 bg-emerald-50 rounded-lg px-3 py-2 ring-1 ring-emerald-200/60">
+                  <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-emerald-200 border-t-emerald-600 shrink-0" />
+                  <span className="text-xs text-emerald-700 font-medium">
+                    Searching Property Price Register...
+                  </span>
+                </div>
+              )}
+
+              {areaError && (
+                <p className="mt-2 text-xs text-zinc-500 bg-zinc-50 rounded-lg px-3 py-2 ring-1 ring-zinc-200/60">
+                  {areaError}
+                </p>
+              )}
+
+              {areaResults.length > 0 && (
+                <div className="mt-3 border border-zinc-200 rounded-xl overflow-hidden bg-white">
+                  <div className="px-4 py-2.5 border-b border-zinc-100 bg-zinc-50">
+                    <p className="text-xs font-medium text-zinc-700">
+                      {areaResults.length} recent sales near{" "}
+                      {areaQuery} — click to use as comparable
+                    </p>
+                  </div>
+                  <ul className="divide-y divide-zinc-50 max-h-80 overflow-y-auto">
+                    {areaResults.map((r) => (
+                      <li key={r.id}>
+                        <button
+                          type="button"
+                          onClick={() => applyAreaResult(r)}
+                          className="w-full text-left px-4 py-3 hover:bg-zinc-50 transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-zinc-900 truncate">
+                                {r.address}
+                              </p>
+                              <p className="text-xs text-zinc-500 mt-0.5">
+                                {r.county}
+                                {r.description ? " · " + r.description : ""}
+                                {" · "}
+                                <span className="text-zinc-400">
+                                  {r.distance_km.toFixed(2)}km away
+                                </span>
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-sm font-semibold text-zinc-900 tabular-nums">
+                                €{Number(r.price).toLocaleString("en-IE")}
+                              </p>
+                              <p className="text-xs text-zinc-500 tabular-nums">
+                                {new Date(r.sale_date).toLocaleDateString("en-IE", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {searchMode === "address" && (
+          <div className="sm:col-span-2">
             <label htmlFor="comp_address" className={labelClass}>
-              Address
+              <span>Address</span>
+              <span className="ml-2 inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 ring-1 ring-emerald-600/20 rounded-full px-2 py-0.5">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"/>
+                  <path d="m21 21-4.35-4.35"/>
+                </svg>
+                PPR Smart Search
+              </span>
             </label>
             <input
               type="text"
@@ -550,30 +765,43 @@ export default function ComparableForm({
             />
 
             {pprLoading && (
-              <div className="mt-1.5 flex items-center gap-2 text-xs text-zinc-400">
-                <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-500" />
-                Searching property register...
+              <div className="mt-2 flex items-center gap-2.5 bg-emerald-50 rounded-lg px-3 py-2 ring-1 ring-emerald-200/60">
+                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-emerald-200 border-t-emerald-600 shrink-0" />
+                <span className="text-xs text-emerald-700 font-medium">
+                  Searching 779,000+ Irish property transactions...
+                </span>
               </div>
             )}
 
             {pprError && address.trim().length >= 6 && (
-              <p className="mt-1.5 text-xs text-zinc-400">
-                No matches found in Property Price Register
+              <p className="mt-2 text-xs text-zinc-500 bg-zinc-50 rounded-lg px-3 py-2 ring-1 ring-zinc-200/60">
+                No PPR records found for this address. The property may not have sold since 2010, or try shortening the address.
               </p>
             )}
 
             {pprUsed && (
-              <p className="mt-1.5 text-xs text-emerald-600">
-                ✓ Price and date filled from Property Price Register
-              </p>
+              <div className="mt-2 flex items-center gap-2 bg-emerald-50 rounded-lg px-3 py-2 ring-1 ring-emerald-200/60">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600 shrink-0">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  <polyline points="9 12 11 14 15 10"/>
+                </svg>
+                <p className="text-xs font-medium text-emerald-700">
+                  Verified from the Property Price Register
+                </p>
+              </div>
             )}
 
             {pprResults.length > 0 && (
               <div className="mt-1.5 border border-zinc-200 rounded-xl overflow-hidden bg-white shadow-lg z-10 relative">
                 <div className="px-4 py-2 border-b border-zinc-100 flex items-center justify-between">
-                  <p className="text-xs text-zinc-500">
-                    Select the correct sale from the register
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                    <p className="text-xs font-medium text-zinc-700">
+                      Property Price Register matches
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setPprResults([])}
@@ -630,6 +858,7 @@ export default function ComparableForm({
               </div>
             )}
           </div>
+          )}
 
           <div>
             <label htmlFor="transaction_type" className={labelClass}>
