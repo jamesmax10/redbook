@@ -1,6 +1,6 @@
 import Link from "next/link";
 import NavLink from "./NavLink";
-import SignOutButton from "./components/SignOutButton";
+import UserMenu from "./components/UserMenu";
 
 export default function AppLayout({
   children,
@@ -46,14 +46,15 @@ export default function AppLayout({
           </NavLink>
         </nav>
 
-        <div className="border-t border-[#3D4260] px-3 py-4 space-y-1">
-          <p className="text-xs text-[#6B7280] px-2 mb-2">RedBook Pro v0.1</p>
-          <SignOutButton />
-        </div>
       </aside>
 
+      {/* Top header */}
+      <header className="fixed top-0 left-52 right-0 h-12 z-20 bg-white border-b border-zinc-200 flex items-center justify-end px-6">
+        <UserMenu />
+      </header>
+
       {/* Main content */}
-      <main className="ml-52 min-h-screen">
+      <main className="ml-52 mt-12 min-h-screen">
         <div className="max-w-3xl mx-auto px-8 py-8">
           {children}
         </div>

@@ -126,6 +126,11 @@ export default async function DashboardPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const firstName =
+    (user.user_metadata?.first_name as string) ||
+    user.email?.split("@")[0] ||
+    "Your";
+
   const sp = await searchParams;
   const activeFilter = parseStatusFilter(sp.status);
 
@@ -176,15 +181,30 @@ export default async function DashboardPage({
   };
 
   return (
-    <div>
+    <div className="relative">
+      {/* Watermark */}
+      <div className="fixed bottom-8 right-8 pointer-events-none select-none z-0">
+        <img
+          src="/logo.png"
+          alt=""
+          className="w-64 opacity-[0.04] grayscale"
+        />
+      </div>
+
+      <div className="relative z-10">
       {/* Top bar */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-xl font-semibold text-zinc-900 tracking-tight">
-            Valuations
+          <h1 className="text-2xl font-semibold text-zinc-900 tracking-tight">
+            {firstName}&apos;s Valuations
           </h1>
-          <p className="text-sm text-zinc-500 mt-0.5">
-            {counts.total} cases
+          <p className="text-sm text-zinc-400 mt-0.5">
+            {counts.total} cases ·{" "}
+            {new Date().toLocaleDateString("en-IE", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            })}
           </p>
         </div>
         <Link href="/cases/new" className={btnPrimary}>
@@ -200,34 +220,35 @@ export default async function DashboardPage({
 
       {/* Metric strip */}
       {counts.total > 0 && (
-        <div className="flex items-center gap-6 mb-8 border border-zinc-200 bg-white rounded-xl px-6 py-4 divide-x divide-zinc-100">
-          <StatPill
-            label="Total"
-            value={counts.total}
+        <div className="grid grid-cols-4 gap-4 mb-8">
+          <Link
             href="/"
-            isActive={activeFilter === null}
-          />
-          <StatPill
-            label="Ready"
-            value={counts.ready}
+            className={`bg-white border border-zinc-200 rounded-xl px-5 py-4 hover:border-zinc-300 hover:shadow-sm transition-all ${activeFilter === null ? "ring-2 ring-zinc-900/10" : "opacity-80 hover:opacity-100"}`}
+          >
+            <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1">Total</p>
+            <p className="text-3xl font-semibold text-zinc-900 tabular-nums">{counts.total}</p>
+          </Link>
+          <Link
             href={activeFilter === "ready" ? "/" : "/?status=ready"}
-            isActive={activeFilter === "ready"}
-            valueColor="text-emerald-600"
-          />
-          <StatPill
-            label="In Progress"
-            value={counts.in_progress}
+            className={`bg-white border border-zinc-200 rounded-xl px-5 py-4 hover:border-zinc-300 hover:shadow-sm transition-all ${activeFilter === "ready" ? "ring-2 ring-emerald-500/20" : "opacity-80 hover:opacity-100"}`}
+          >
+            <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1">Ready</p>
+            <p className="text-3xl font-semibold text-emerald-600 tabular-nums">{counts.ready}</p>
+          </Link>
+          <Link
             href={activeFilter === "in_progress" ? "/" : "/?status=in_progress"}
-            isActive={activeFilter === "in_progress"}
-            valueColor="text-blue-600"
-          />
-          <StatPill
-            label="Incomplete"
-            value={counts.incomplete}
+            className={`bg-white border border-zinc-200 rounded-xl px-5 py-4 hover:border-zinc-300 hover:shadow-sm transition-all ${activeFilter === "in_progress" ? "ring-2 ring-blue-500/20" : "opacity-80 hover:opacity-100"}`}
+          >
+            <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1">In Progress</p>
+            <p className="text-3xl font-semibold text-blue-600 tabular-nums">{counts.in_progress}</p>
+          </Link>
+          <Link
             href={activeFilter === "incomplete" ? "/" : "/?status=incomplete"}
-            isActive={activeFilter === "incomplete"}
-            valueColor="text-amber-600"
-          />
+            className={`bg-white border border-zinc-200 rounded-xl px-5 py-4 hover:border-zinc-300 hover:shadow-sm transition-all ${activeFilter === "incomplete" ? "ring-2 ring-amber-500/20" : "opacity-80 hover:opacity-100"}`}
+          >
+            <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1">Incomplete</p>
+            <p className="text-3xl font-semibold text-amber-600 tabular-nums">{counts.incomplete}</p>
+          </Link>
         </div>
       )}
 
@@ -280,9 +301,11 @@ export default async function DashboardPage({
                       >
                         <div
                           className={`bg-white border border-zinc-200 rounded-xl px-5 py-4 mb-2 hover:border-zinc-300 hover:shadow-sm transition-all ${
-                            c.status === "incomplete"
-                              ? "border-l-4 border-l-amber-400"
-                              : ""
+                            c.status === "ready"
+                              ? "border-l-4 border-l-emerald-400"
+                              : c.status === "in_progress"
+                              ? "border-l-4 border-l-blue-400"
+                              : "border-l-4 border-l-amber-400"
                           }`}
                         >
                           <div className="flex items-start justify-between gap-4">
@@ -316,42 +339,7 @@ export default async function DashboardPage({
           })}
         </div>
       )}
+      </div>
     </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Stat pill (inline metric in the strip)
-// ---------------------------------------------------------------------------
-
-function StatPill({
-  label,
-  value,
-  href,
-  isActive,
-  valueColor,
-}: {
-  label: string;
-  value: number;
-  href: string;
-  isActive?: boolean;
-  valueColor?: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`pl-6 first:pl-0 flex flex-col gap-0.5 hover:opacity-80 transition-opacity ${
-        isActive ? "opacity-100" : "opacity-70"
-      }`}
-    >
-      <span className="text-xs text-zinc-500 font-medium uppercase tracking-wider">
-        {label}
-      </span>
-      <span
-        className={`text-2xl font-semibold tabular-nums ${valueColor ?? "text-zinc-900"}`}
-      >
-        {value}
-      </span>
-    </Link>
   );
 }

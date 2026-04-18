@@ -156,7 +156,7 @@ export default function ComparableForm({
   }>>([]);
   const [pprError, setPprError] = useState<string | null>(null);
   const [pprUsed, setPprUsed] = useState(false);
-  const [searchMode, setSearchMode] = useState<"address" | "area">("address");
+  const [searchMode, setSearchMode] = useState<"address" | "area">("area");
   const [areaQuery, setAreaQuery] = useState("");
   const [areaLoading, setAreaLoading] = useState(false);
   const [areaResults, setAreaResults] = useState<Array<{
@@ -527,21 +527,6 @@ export default function ComparableForm({
                 <button
                   type="button"
                   onClick={() => {
-                    setSearchMode("address");
-                    setAreaResults([]);
-                    setAreaError(null);
-                  }}
-                  className={`flex-1 px-4 py-3 text-sm font-medium transition-all ${
-                    searchMode === "address"
-                      ? "bg-white text-zinc-900 shadow-sm border-b-2 border-b-teal-500"
-                      : "text-zinc-400 hover:text-zinc-600"
-                  }`}
-                >
-                  Known address
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
                     setSearchMode("area");
                     setPprResults([]);
                     setPprError(null);
@@ -553,6 +538,21 @@ export default function ComparableForm({
                   }`}
                 >
                   ✦ Browse area sales
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchMode("address");
+                    setAreaResults([]);
+                    setAreaError(null);
+                  }}
+                  className={`flex-1 px-4 py-3 text-sm font-medium transition-all ${
+                    searchMode === "address"
+                      ? "bg-white text-zinc-900 shadow-sm border-b-2 border-b-teal-500"
+                      : "text-zinc-400 hover:text-zinc-600"
+                  }`}
+                >
+                  Known address
                 </button>
               </div>
 

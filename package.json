@@ -12,6 +12,7 @@
     "geocode-progress": "tsx scripts/check-geocoding-progress.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.101.0",
     "docx": "^9.6.1",

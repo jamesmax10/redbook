@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase-server";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { updateCase, saveProperty, addComparable } from "@/app/actions";
+import ValidationPanel from "./ValidationPanel";
 import type { Adjustment } from "@/lib/types";
 import {
   inputClass,
@@ -757,6 +758,8 @@ export default async function CaseDetailPage({
               }
             )}
           </div>
+
+          <ValidationPanel caseId={id} />
 
           {/* Report action */}
           <div className="mt-10 flex flex-col items-center gap-3">
