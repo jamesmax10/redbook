@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface Finding {
   id?: string;
@@ -60,6 +60,11 @@ export default function ValidationPanel({ caseId }: { caseId: string }) {
   const [result, setResult] = useState<ValidationResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    runValidation();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function runValidation() {
     setLoading(true);

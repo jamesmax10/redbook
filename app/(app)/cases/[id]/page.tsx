@@ -266,7 +266,7 @@ export default async function CaseDetailPage({
         }
       : null;
 
-  const validation = runValidation(caseData, comparables, valuation);
+  const validation = runValidation(id, caseData, comparables, valuation);
 
   const statusInput = {
     caseFields: caseData,
@@ -746,9 +746,17 @@ export default async function CaseDetailPage({
                         return (
                           <li
                             key={check.message}
-                            className={`text-xs ${color}`}
+                            className={`text-xs ${color} flex items-center gap-1.5`}
                           >
-                            {check.message}
+                            <span>{check.message}</span>
+                            {check.severity !== "pass" && check.fixHref && (
+                              <Link
+                                href={check.fixHref}
+                                className={`underline underline-offset-2 shrink-0 hover:opacity-70 transition-opacity`}
+                              >
+                                Fix →
+                              </Link>
+                            )}
                           </li>
                         );
                       })}

@@ -5,6 +5,7 @@ export interface ValidationCheck {
   section: Section;
   severity: Severity;
   message: string;
+  fixHref?: string;
 }
 
 export interface SectionStatus {
@@ -20,7 +21,25 @@ export interface ValidationResult {
   sections: Record<Section, SectionStatus>;
 }
 
+const RATIONALE_SIGNALS: Array<{ terms: string[] }> = [
+  { terms: ["comparable", "evidence", "transaction", "letting", "sale"] },
+  { terms: ["€", "per sq", "rate", "psm", "psf"] },
+  { terms: ["adjust", "superior", "inferior", "location", "condition", "size"] },
+  { terms: ["adopt", "conclude", "opinion", "market", "reflect"] },
+];
+
+export function scoreRationale(text: string): number {
+  const lower = text.toLowerCase();
+  let score = 0;
+  if (text.length >= 80) score++;
+  for (const signal of RATIONALE_SIGNALS) {
+    if (signal.terms.some((t) => lower.includes(t))) score++;
+  }
+  return score;
+}
+
 export function runValidation(
+  caseId: string,
   caseData: Record<string, unknown>,
   comparables: unknown[] | null,
   valuation: {
@@ -42,20 +61,18 @@ export function runValidation(
           section: "case",
           severity: "error",
           message: "Client name is missing",
+          fixHref: `/cases/${caseId}?step=1`,
         }
   );
 
   checks.push(
     caseData.property_address
-      ? {
-          section: "case",
-          severity: "pass",
-          message: "Property address provided",
-        }
+      ? { section: "case", severity: "pass", message: "Property address provided" }
       : {
           section: "case",
           severity: "error",
           message: "Property address is missing",
+          fixHref: `/cases/${caseId}?step=1`,
         }
   );
 
@@ -66,6 +83,7 @@ export function runValidation(
           section: "case",
           severity: "error",
           message: "Valuation date is missing",
+          fixHref: `/cases/${caseId}?step=1`,
         }
   );
 
@@ -83,12 +101,14 @@ export function runValidation(
       section: "comparables",
       severity: "warning",
       message: "Only 1 comparable added — minimum 2 required",
+      fixHref: `/cases/${caseId}?step=3`,
     });
   } else {
     checks.push({
       section: "comparables",
       severity: "error",
       message: "No comparables added yet",
+      fixHref: `/cases/${caseId}?step=3`,
     });
   }
 
@@ -101,34 +121,44 @@ export function runValidation(
           section: "valuation",
           severity: "error",
           message: "Adopted rate is missing",
+          fixHref: `/cases/${caseId}?step=4`,
         }
   );
 
-  checks.push(
-    valuation?.adopted_rate_rationale
-      ? {
-          section: "valuation",
-          severity: "pass",
-          message: "Rationale provided",
-        }
-      : {
-          section: "valuation",
-          severity: "error",
-          message: "Adopted rate rationale is missing",
-        }
-  );
+  // Structured rationale check
+  const rationaleText = valuation?.adopted_rate_rationale ?? "";
+  const rationaleScore = scoreRationale(rationaleText);
+  if (!rationaleText || rationaleScore === 0) {
+    checks.push({
+      section: "valuation",
+      severity: "error",
+      message: "Adopted rate rationale is missing",
+      fixHref: `/cases/${caseId}?step=4`,
+    });
+  } else if (rationaleScore < 3) {
+    checks.push({
+      section: "valuation",
+      severity: "warning",
+      message:
+        "Rationale may be insufficient — reference comparables, adjustments, and adopted rate",
+      fixHref: `/cases/${caseId}?step=4`,
+    });
+  } else {
+    checks.push({
+      section: "valuation",
+      severity: "pass",
+      message: "Rationale provided",
+    });
+  }
 
   checks.push(
     valuation?.assumptions
-      ? {
-          section: "valuation",
-          severity: "pass",
-          message: "Assumptions provided",
-        }
+      ? { section: "valuation", severity: "pass", message: "Assumptions provided" }
       : {
           section: "valuation",
           severity: "warning",
           message: "Assumptions not provided",
+          fixHref: `/cases/${caseId}?step=4`,
         }
   );
 
@@ -143,20 +173,18 @@ export function runValidation(
           section: "valuation",
           severity: "warning",
           message: "Limiting conditions not provided",
+          fixHref: `/cases/${caseId}?step=4`,
         }
   );
 
   checks.push(
     valuation?.valuer_name
-      ? {
-          section: "valuation",
-          severity: "pass",
-          message: "Valuer name provided",
-        }
+      ? { section: "valuation", severity: "pass", message: "Valuer name provided" }
       : {
           section: "valuation",
           severity: "warning",
           message: "Valuer name not provided",
+          fixHref: `/cases/${caseId}?step=4`,
         }
   );
 
