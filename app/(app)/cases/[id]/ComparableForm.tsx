@@ -14,40 +14,20 @@ import {
   card,
   overline,
 } from "@/lib/styles";
+import {
+  PROPERTY_TYPE_KEYWORDS,
+  ADDRESS_NOISE,
+  cleanAddress,
+  inferTransactionType,
+} from "@/lib/listingParser";
+import {
+  TRANSACTION_TYPE_OPTIONS,
+  emptyAdjustment,
+} from "@/lib/adjustmentHelpers";
 
 const formLabel = "block text-xs font-medium text-zinc-500 mb-1";
 
-const TRANSACTION_TYPE_OPTIONS = [
-  "Sale",
-  "Letting",
-  "Rent Review",
-  "Lease Renewal",
-];
-
-function emptyAdjustment(): Adjustment {
-  return { factor: "location", percentage: 0, rationale: "" };
-}
-
 const URL_PATTERN = /^https?:\/\/\S+$/i;
-
-const PROPERTY_TYPE_KEYWORDS = [
-  "office",
-  "retail",
-  "industrial",
-  "warehouse",
-  "restaurant",
-  "mixed use",
-  "mixed-use",
-  "apartment",
-  "residential",
-  "hotel",
-  "pub",
-  "shop",
-  "showroom",
-  "clinic",
-  "crèche",
-  "creche",
-] as const;
 
 interface ParseResult {
   urlOnly: boolean;
@@ -56,31 +36,6 @@ interface ParseResult {
   area: string;
   propertyType: string;
   transactionType: string;
-}
-
-const ADDRESS_NOISE = [
-  /\b(is\s+)?for\s+sale\b/gi,
-  /\bto\s+(let|rent)\b/gi,
-  /\bon\s+(Daft\.ie|MyHome\.ie|PropertyPal|Lisney|CBRE|BNP|JLL|Savills|Allsop)\b/gi,
-  /\b(Sale Agreed|Price on Application|POA)\b/gi,
-];
-
-function cleanAddress(raw: string): string {
-  let addr = raw;
-  for (const re of ADDRESS_NOISE) {
-    addr = addr.replace(re, "");
-  }
-  return addr
-    .replace(/\s*[,\-–|]\s*$/, "")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-}
-
-function inferTransactionType(text: string): string {
-  const lower = text.toLowerCase();
-  if (/\bfor\s+sale\b/.test(lower) || /\bsale\s+agreed\b/.test(lower)) return "Sale";
-  if (/\bto\s+(let|rent)\b/.test(lower) || /\bfor\s+rent\b/.test(lower)) return "Letting";
-  return "";
 }
 
 function isUrlLine(line: string): boolean {
@@ -222,13 +177,7 @@ export default function ComparableForm({
 
   const handlePprSearch = useCallback(async () => {
     const searchAddress = address.trim();
-    // #region agent log
-    fetch('http://127.0.0.1:7753/ingest/fe992d52-33c9-4a9f-ad9d-1d5e5b991e5e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'17e22d'},body:JSON.stringify({sessionId:'17e22d',location:'ComparableForm.tsx:handlePprSearch',message:'handlePprSearch called',data:{searchAddress,len:searchAddress.length},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
-    // #endregion
     if (!searchAddress || searchAddress.length < 6) {
-      // #region agent log
-      fetch('http://127.0.0.1:7753/ingest/fe992d52-33c9-4a9f-ad9d-1d5e5b991e5e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'17e22d'},body:JSON.stringify({sessionId:'17e22d',location:'ComparableForm.tsx:handlePprSearch:earlyReturn',message:'early return - address too short',data:{searchAddress,len:searchAddress.length},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
-      // #endregion
       setPprResults([]);
       setPprError(null);
       return;
@@ -243,9 +192,6 @@ export default function ComparableForm({
         body: JSON.stringify({ address: searchAddress }),
       });
       const json = await res.json();
-      // #region agent log
-      fetch('http://127.0.0.1:7753/ingest/fe992d52-33c9-4a9f-ad9d-1d5e5b991e5e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'17e22d'},body:JSON.stringify({sessionId:'17e22d',location:'ComparableForm.tsx:handlePprSearch:response',message:'PPR fetch response',data:{ok:res.ok,status:res.status,json},timestamp:Date.now(),hypothesisId:'H3,H4'})}).catch(()=>{});
-      // #endregion
       if (!res.ok || json.error) {
         setPprError(json.error ?? "Search failed.");
         return;
@@ -256,9 +202,6 @@ export default function ComparableForm({
       }
       setPprResults(json.results);
     } catch (err) {
-      // #region agent log
-      fetch('http://127.0.0.1:7753/ingest/fe992d52-33c9-4a9f-ad9d-1d5e5b991e5e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'17e22d'},body:JSON.stringify({sessionId:'17e22d',location:'ComparableForm.tsx:handlePprSearch:catch',message:'PPR fetch error',data:{error:String(err)},timestamp:Date.now(),hypothesisId:'H3'})}).catch(()=>{});
-      // #endregion
       setPprError("Search failed. Check your connection.");
     } finally {
       setPprLoading(false);
@@ -270,18 +213,12 @@ export default function ComparableForm({
       skipPprSearch.current = false;
       return;
     }
-    // #region agent log
-    fetch('http://127.0.0.1:7753/ingest/fe992d52-33c9-4a9f-ad9d-1d5e5b991e5e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'17e22d'},body:JSON.stringify({sessionId:'17e22d',location:'ComparableForm.tsx:useEffect',message:'useEffect fired',data:{address,trimmedLen:address.trim().length},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
-    // #endregion
     if (address.trim().length < 6) {
       setPprResults([]);
       setPprError(null);
       return;
     }
     const timer = setTimeout(() => {
-      // #region agent log
-      fetch('http://127.0.0.1:7753/ingest/fe992d52-33c9-4a9f-ad9d-1d5e5b991e5e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'17e22d'},body:JSON.stringify({sessionId:'17e22d',location:'ComparableForm.tsx:useEffect:timeout',message:'setTimeout fired, calling handlePprSearch',data:{address},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
       handlePprSearch();
     }, 400);
     return () => clearTimeout(timer);
@@ -327,23 +264,23 @@ export default function ComparableForm({
     sale_date: string;
     address: string;
     price: number;
+    distance_km: number;
   }) {
     skipPprSearch.current = true;
+    const dateStr = result.sale_date.slice(0, 10);
     setAddress(result.address);
     setPriceOrRent(String(result.price));
-    setTransactionDate(result.sale_date);
+    setTransactionDate(dateStr);
     setTransactionType("Sale");
     setDateEstimated(false);
     setAreaResults([]);
     setPprUsed(true);
-    setFilledFields((s) => {
-      const n = new Set(s);
-      n.add("address");
-      n.add("price");
-      n.add("transactionDate");
-      n.add("transactionType");
-      return n;
-    });
+    setFilledFields(new Set([
+      "address",
+      "price",
+      "transactionDate",
+      "transactionType"
+    ]));
     setSearchMode("address");
   }
 
@@ -428,21 +365,20 @@ export default function ComparableForm({
     price: number;
   }) {
     skipPprSearch.current = true;
+    const dateStr = result.sale_date.slice(0, 10);
     setAddress(result.address);
     setPriceOrRent(String(result.price));
-    setTransactionDate(new Date(result.sale_date).toISOString().slice(0, 10));
+    setTransactionDate(dateStr);
     setTransactionType("Sale");
     setDateEstimated(false);
     setPprResults([]);
     setPprUsed(true);
-    setFilledFields((s) => {
-      const n = new Set(s);
-      n.add("address");
-      n.add("price");
-      n.add("transactionDate");
-      n.add("transactionType");
-      return n;
-    });
+    setFilledFields(new Set([
+      "address",
+      "price",
+      "transactionDate",
+      "transactionType"
+    ]));
   }
 
   const price = parseFloat(priceOrRent);
@@ -648,14 +584,18 @@ export default function ComparableForm({
                         onClick={() => {
                           skipPprSearch.current = true;
                           setAddress("");
+                          setPriceOrRent("");
+                          setArea("");
+                          setTransactionDate("");
+                          setTransactionType("");
+                          setDateEstimated(false);
                           setPprResults([]);
                           setPprUsed(false);
                           setPprError(null);
-                          setFilledFields((s) => {
-                            const n = new Set(s);
-                            n.delete("address");
-                            return n;
-                          });
+                          setFilledFields(new Set());
+                          setAdjustments([]);
+                          setErrors([]);
+                          setDuplicateWarning(false);
                         }}
                         className="absolute right-8 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-zinc-500 transition-colors text-base leading-none px-1"
                         aria-label="Clear address"

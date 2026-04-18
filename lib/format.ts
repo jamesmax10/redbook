@@ -9,8 +9,9 @@ export function fmtCurrency(v: number): string {
   });
 }
 
-export function fmtDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-IE", {
+export function fmtDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return "Not provided";
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-IE", {
     day: "numeric",
     month: "long",
     year: "numeric",

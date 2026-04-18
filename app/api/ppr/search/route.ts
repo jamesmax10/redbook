@@ -32,8 +32,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ results: [] });
     }
 
-    console.log("PPR search term:", firstPart);
-
     // Detect county from full address
     const countyHints: Record<string, string> = {
       dublin: "Dublin", galway: "Galway", cork: "Cork",
@@ -64,8 +62,8 @@ export async function POST(req: NextRequest) {
 
     if (countyFilter) {
       queryText = `
-        SELECT id, sale_date, address, county, eircode, 
-               price, description
+        SELECT id, to_char(sale_date, 'YYYY-MM-DD') as sale_date,
+               address, county, eircode, price, description
         FROM public.ppr_transactions
         WHERE upper(address) LIKE $1
           AND county ILIKE $2
@@ -75,8 +73,8 @@ export async function POST(req: NextRequest) {
       queryParams = [`${firstPart}%`, countyFilter];
     } else {
       queryText = `
-        SELECT id, sale_date, address, county, eircode,
-               price, description
+        SELECT id, to_char(sale_date, 'YYYY-MM-DD') as sale_date,
+               address, county, eircode, price, description
         FROM public.ppr_transactions
         WHERE upper(address) LIKE $1
         ORDER BY sale_date DESC
@@ -94,17 +92,12 @@ export async function POST(req: NextRequest) {
       client.release();
     }
 
-    console.log(`PPR search returned ${results.length} results`);
-
     return NextResponse.json({ results });
 
   } catch (err) {
-    const message = err instanceof Error 
-      ? err.message 
-      : String(err);
-    console.error("PPR route error:", message);
+    console.error("PPR error:", err);
     return NextResponse.json(
-      { error: message },
+      { error: "Search failed" },
       { status: 500 }
     );
   }

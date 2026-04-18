@@ -15,6 +15,7 @@ import {
   ShadingType,
 } from "docx";
 import type { Adjustment } from "./types";
+import { fmtCurrency, fmtDate } from "./format";
 
 interface Comparable {
   address: string;
@@ -51,21 +52,6 @@ export interface ReportData {
     limiting_conditions: string | null;
     valuer_name: string | null;
   } | null;
-}
-
-function fmtCurrency(v: number): string {
-  return v.toLocaleString("en-IE", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
-function fmtDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-IE", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
 }
 
 const FONT = "Calibri";
@@ -348,7 +334,7 @@ export async function generateReportDocx(data: ReportData): Promise<Buffer> {
     children.push(fieldRow("Condition", property.condition));
     children.push(fieldRow("Tenure", property.tenure));
   } else {
-    bodyText("No subject property recorded for this case.", { italics: true });
+    children.push(bodyText("No subject property recorded for this case.", { italics: true }));
   }
 
   // ── Section 2: Valuation Context ──

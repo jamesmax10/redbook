@@ -21,6 +21,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ results: [] });
     }
 
+    if (!radiusKm || radiusKm <= 0 || radiusKm > 50) {
+      return NextResponse.json(
+        { error: "Invalid radius" },
+        { status: 400 }
+      );
+    }
+
     const params = new URLSearchParams({
       q: `${area}, Ireland`,
       format: "json",
@@ -55,8 +62,6 @@ export async function POST(req: NextRequest) {
     const lat = parseFloat(geoData[0].lat);
     const lng = parseFloat(geoData[0].lon);
 
-    console.log(`Area search: ${area} → lat ${lat}, lng ${lng}`);
-
     const client = await pool.connect();
     let results;
     try {
@@ -64,7 +69,7 @@ export async function POST(req: NextRequest) {
         `
         SELECT 
           id,
-          sale_date,
+          to_char(sale_date, 'YYYY-MM-DD') as sale_date,
           address,
           county,
           eircode,
@@ -95,8 +100,6 @@ export async function POST(req: NextRequest) {
       client.release();
     }
 
-    console.log(`Area search returned ${results.length} results`);
-
     return NextResponse.json({
       results,
       centre: { lat, lng },
@@ -104,12 +107,9 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (err) {
-    const message = err instanceof Error
-      ? err.message
-      : String(err);
-    console.error("Area search error:", message);
+    console.error("PPR error:", err);
     return NextResponse.json(
-      { error: message },
+      { error: "Search failed" },
       { status: 500 }
     );
   }

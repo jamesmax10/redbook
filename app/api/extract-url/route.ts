@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase-server";
+import {
+  PROPERTY_TYPE_KEYWORDS,
+  cleanAddress,
+  inferTransactionType,
+} from "@/lib/listingParser";
 
 interface ExtractedData {
   address: string;
@@ -9,50 +15,6 @@ interface ExtractedData {
 }
 
 const TIMEOUT_MS = 8000;
-
-const PROPERTY_TYPE_KEYWORDS = [
-  "office",
-  "retail",
-  "industrial",
-  "warehouse",
-  "restaurant",
-  "mixed use",
-  "mixed-use",
-  "apartment",
-  "residential",
-  "hotel",
-  "pub",
-  "shop",
-  "showroom",
-  "clinic",
-  "crèche",
-  "creche",
-];
-
-const ADDRESS_NOISE = [
-  /\b(is\s+)?for\s+sale\b/gi,
-  /\bto\s+(let|rent)\b/gi,
-  /\bon\s+(Daft\.ie|MyHome\.ie|PropertyPal|Lisney|CBRE|BNP|JLL|Savills|Allsop)\b/gi,
-  /\b(Sale Agreed|Price on Application|POA)\b/gi,
-];
-
-function cleanAddress(raw: string): string {
-  let addr = raw;
-  for (const re of ADDRESS_NOISE) {
-    addr = addr.replace(re, "");
-  }
-  return addr
-    .replace(/\s*[,\-–|]\s*$/, "")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-}
-
-function inferTransactionType(text: string): string {
-  const lower = text.toLowerCase();
-  if (/\bfor\s+sale\b/.test(lower) || /\bsale\s+agreed\b/.test(lower)) return "Sale";
-  if (/\bto\s+(let|rent)\b/.test(lower) || /\bfor\s+rent\b/.test(lower)) return "Letting";
-  return "";
-}
 
 function stripTags(html: string): string {
   return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
@@ -129,6 +91,12 @@ function extractFromHtml(html: string): ExtractedData | null {
 
 export async function POST(req: NextRequest) {
   try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
     const url: string = body?.url;
 

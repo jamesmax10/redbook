@@ -120,7 +120,8 @@ export async function saveProperty(
     const { error } = await supabase
       .from("properties")
       .update(row)
-      .eq("id", propertyId);
+      .eq("id", propertyId)
+      .eq("case_id", caseId);
     if (error) throw new Error(error.message);
   } else {
     const { error } = await supabase.from("properties").insert(row);
@@ -153,11 +154,15 @@ export async function addComparable(caseId: string, formData: FormData) {
 
   const adjustmentsRaw = formData.get("adjustments_json") as string | null;
   if (adjustmentsRaw) {
-    const parsed: Adjustment[] = JSON.parse(adjustmentsRaw);
-    if (parsed.length > 0) {
-      adjustments = parsed;
-      const totalPct = parsed.reduce((sum, a) => sum + a.percentage, 0);
-      adjustedRatePerSqm = ratePerSqm * (1 + totalPct / 100);
+    try {
+      const parsed: Adjustment[] = JSON.parse(adjustmentsRaw);
+      if (parsed.length > 0) {
+        adjustments = parsed;
+        const totalPct = parsed.reduce((sum, a) => sum + a.percentage, 0);
+        adjustedRatePerSqm = ratePerSqm * (1 + totalPct / 100);
+      }
+    } catch {
+      // malformed input — proceed without adjustments
     }
   }
 
@@ -219,11 +224,15 @@ export async function updateComparable(
 
   const adjustmentsRaw = formData.get("adjustments_json") as string | null;
   if (adjustmentsRaw) {
-    const parsed: Adjustment[] = JSON.parse(adjustmentsRaw);
-    if (parsed.length > 0) {
-      adjustments = parsed;
-      const totalPct = parsed.reduce((sum, a) => sum + a.percentage, 0);
-      adjustedRatePerSqm = ratePerSqm * (1 + totalPct / 100);
+    try {
+      const parsed: Adjustment[] = JSON.parse(adjustmentsRaw);
+      if (parsed.length > 0) {
+        adjustments = parsed;
+        const totalPct = parsed.reduce((sum, a) => sum + a.percentage, 0);
+        adjustedRatePerSqm = ratePerSqm * (1 + totalPct / 100);
+      }
+    } catch {
+      // malformed input — proceed without adjustments
     }
   }
 
@@ -239,7 +248,8 @@ export async function updateComparable(
       adjustments,
       adjusted_rate_per_sqm: adjustedRatePerSqm,
     })
-    .eq("id", comparableId);
+    .eq("id", comparableId)
+    .eq("case_id", caseId);
 
   if (error) {
     return { success: false, error: error.message };
@@ -256,7 +266,8 @@ export async function deleteComparable(comparableId: string, caseId: string, red
   const { error } = await supabase
     .from("comparables")
     .delete()
-    .eq("id", comparableId);
+    .eq("id", comparableId)
+    .eq("case_id", caseId);
 
   if (error) {
     throw new Error(error.message);
@@ -279,6 +290,7 @@ export async function saveAdjustments(
     .from("comparables")
     .select("rate_per_sqm")
     .eq("id", comparableId)
+    .eq("case_id", caseId)
     .single();
 
   if (fetchError || !comp) {
@@ -295,7 +307,8 @@ export async function saveAdjustments(
       adjustments: adjustments.length > 0 ? adjustments : null,
       adjusted_rate_per_sqm: adjustments.length > 0 ? adjustedRate : ratePerSqm,
     })
-    .eq("id", comparableId);
+    .eq("id", comparableId)
+    .eq("case_id", caseId);
 
   if (error) {
     throw new Error(error.message);

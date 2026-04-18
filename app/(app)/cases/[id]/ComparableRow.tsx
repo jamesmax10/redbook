@@ -14,17 +14,10 @@ import {
   card,
 } from "@/lib/styles";
 import DeleteComparableButton from "./DeleteComparableButton";
-
-const TRANSACTION_TYPE_OPTIONS = [
-  "Sale",
-  "Letting",
-  "Rent Review",
-  "Lease Renewal",
-];
-
-function emptyAdjustment(): Adjustment {
-  return { factor: "location", percentage: 0, rationale: "" };
-}
+import {
+  TRANSACTION_TYPE_OPTIONS,
+  emptyAdjustment,
+} from "@/lib/adjustmentHelpers";
 
 interface ComparableData {
   id: string;
