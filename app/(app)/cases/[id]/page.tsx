@@ -16,6 +16,7 @@ import {
   deriveStepCompletion,
   STATUS_BADGE,
 } from "@/lib/caseStatus";
+import AddressAutocomplete from "./AddressAutocomplete";
 import ComparableForm from "./ComparableForm";
 import ComparableRow from "./ComparableRow";
 import ComparableStepNav from "./ComparableStepNav";
@@ -457,15 +458,13 @@ export default async function CaseDetailPage({
                 <label htmlFor="address" className={labelClass}>
                   Address
                 </label>
-                <input
-                  type="text"
+                <AddressAutocomplete
                   id="address"
                   name="address"
                   required
                   defaultValue={
                     property?.address ?? caseData.property_address ?? ""
                   }
-                  className={inputClass}
                 />
               </div>
 
@@ -575,9 +574,9 @@ export default async function CaseDetailPage({
                 : "Add at least 2 comparables to proceed."}
           </p>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-8 items-start">
             {/* LEFT — Add comparable */}
-            <div className="bg-white border border-zinc-200 rounded-xl p-5">
+            <div className="bg-white border border-zinc-200 rounded-xl p-6">
               <h3 className="text-sm font-semibold text-zinc-900 mb-4">
                 Add Comparable
               </h3>

@@ -109,6 +109,34 @@ function parseListingText(text: string): ParseResult {
   return result;
 }
 
+// ---------------------------------------------------------------------------
+// Shared PPR area fetch — used by both Browse Area Sales and Suggestions
+// ---------------------------------------------------------------------------
+
+type PprAreaResult = {
+  id: string;
+  sale_date: string;
+  address: string;
+  county: string | null;
+  price: number;
+  description: string | null;
+  distance_km: number;
+};
+
+async function pprAreaFetch(
+  area: string,
+  radiusKm: number
+): Promise<{ results: PprAreaResult[]; area: string }> {
+  const res = await fetch("/api/ppr/area-search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ area, radiusKm }),
+  });
+  const json = await res.json();
+  if (!res.ok || json.error) throw new Error(json.error ?? "Search failed");
+  return json as { results: PprAreaResult[]; area: string };
+}
+
 export interface ExistingComparable {
   address: string;
   price_or_rent: number;
@@ -158,6 +186,7 @@ export default function ComparableForm({
   const [pprUsed, setPprUsed] = useState(false);
   const [searchMode, setSearchMode] = useState<"address" | "area">("area");
   const [areaQuery, setAreaQuery] = useState("");
+  const [areaRadiusKm, setAreaRadiusKm] = useState(5);
   const [areaLoading, setAreaLoading] = useState(false);
   const [areaResults, setAreaResults] = useState<Array<{
     id: string;
@@ -170,6 +199,8 @@ export default function ComparableForm({
   }>>([]);
   const [areaError, setAreaError] = useState<string | null>(null);
   const [areaName, setAreaName] = useState<string | null>(null);
+  const [suggestedComps, setSuggestedComps] = useState<PprAreaResult[]>([]);
+  const [suggestLoading, setSuggestLoading] = useState(false);
   const skipDuplicateCheck = useRef(false);
   const skipPprSearch = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -231,28 +262,16 @@ export default function ComparableForm({
     setAreaResults([]);
     setAreaName(null);
     try {
-      const res = await fetch("/api/ppr/area-search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          area: areaQuery.trim(),
-          radiusKm: 1.5,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        setAreaError(json.error ?? "Search failed.");
-        return;
-      }
-      if (json.results.length === 0) {
+      const data = await pprAreaFetch(areaQuery.trim(), areaRadiusKm);
+      if (data.results.length === 0) {
         setAreaError(
           "No PPR sales found in this area. " +
           "Try a nearby town or increase the search radius."
         );
         return;
       }
-      setAreaResults(json.results);
-      setAreaName(json.area ?? null);
+      setAreaResults(data.results);
+      setAreaName(data.area ?? null);
     } catch {
       setAreaError("Search failed. Check your connection.");
     } finally {
@@ -379,6 +398,39 @@ export default function ComparableForm({
       "transactionDate",
       "transactionType"
     ]));
+    // Background: fetch nearby comparables for this verified address.
+    // Strip the street/number prefix so Nominatim can geocode the locality reliably.
+    const firstComma = result.address.indexOf(",");
+    const geocodeQuery =
+      firstComma !== -1
+        ? result.address.slice(firstComma + 1).trim()
+        : result.address;
+    setSuggestedComps([]);
+    setSuggestLoading(true);
+    pprAreaFetch(geocodeQuery, areaRadiusKm)
+      .then((data) => {
+        const verifiedAddr = result.address.trim().toLowerCase();
+        const filtered = data.results
+          .filter((r) => r.address.trim().toLowerCase() !== verifiedAddr)
+          .slice(0, 6);
+        setSuggestedComps(filtered);
+      })
+      .catch(() => {})
+      .finally(() => setSuggestLoading(false));
+  }
+
+  function applySuggestion(result: PprAreaResult) {
+    skipPprSearch.current = true;
+    setAddress(result.address);
+    setPriceOrRent(String(result.price));
+    setTransactionDate(result.sale_date.slice(0, 10));
+    setTransactionType("Sale");
+    setDateEstimated(false);
+    setPprUsed(true);
+    setFilledFields(new Set(["address", "price", "transactionDate", "transactionType"]));
+    setSuggestedComps((prev) => prev.filter((r) => r.id !== result.id));
+    setPprResults([]);
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   const price = parseFloat(priceOrRent);
@@ -556,7 +608,7 @@ export default function ComparableForm({
                 </button>
               </div>
 
-              <div className="p-4">
+              <div className="p-5">
                 {searchMode === "address" && (
                   <div className="relative">
                     <input
@@ -596,6 +648,7 @@ export default function ComparableForm({
                           setAdjustments([]);
                           setErrors([]);
                           setDuplicateWarning(false);
+                          setSuggestedComps([]);
                         }}
                         className="absolute right-8 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-zinc-500 transition-colors text-base leading-none px-1"
                         aria-label="Clear address"
@@ -612,35 +665,66 @@ export default function ComparableForm({
                 )}
 
                 {searchMode === "area" && (
-                  <div className="relative flex gap-2">
-                    <div className="relative flex-1">
-                      <input
-                        type="text"
-                        value={areaQuery}
-                        onChange={(e) => setAreaQuery(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            handleAreaSearch();
-                          }
-                        }}
-                        placeholder="e.g. Salthill, Galway"
-                        className="w-full px-4 py-3 pr-12 rounded-xl border border-zinc-200 bg-zinc-50 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400 focus:bg-white transition-all"
-                      />
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-teal-500">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 2L13.09 8.26L19 6L14.74 10.74L21 12L14.74 13.26L19 18L13.09 15.74L12 22L10.91 15.74L5 18L9.26 13.26L3 12L9.26 10.74L5 6L10.91 8.26L12 2Z"/>
-                        </svg>
+                  <div className="space-y-3">
+                    {/* Input row */}
+                    <div className="flex gap-3">
+                      <div className="relative flex-1">
+                        <input
+                          type="text"
+                          value={areaQuery}
+                          onChange={(e) => setAreaQuery(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleAreaSearch();
+                            }
+                          }}
+                          placeholder="e.g. Salthill, Galway"
+                          className="w-full px-4 py-3 pr-12 rounded-xl border border-zinc-200 bg-zinc-50 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400 focus:bg-white transition-all"
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-teal-500">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2L13.09 8.26L19 6L14.74 10.74L21 12L14.74 13.26L19 18L13.09 15.74L12 22L10.91 15.74L5 18L9.26 13.26L3 12L9.26 10.74L5 6L10.91 8.26L12 2Z"/>
+                          </svg>
+                        </div>
                       </div>
+                      <select
+                        value={areaRadiusKm}
+                        onChange={(e) => setAreaRadiusKm(Number(e.target.value))}
+                        className="shrink-0 px-3 py-2 rounded-xl border border-zinc-200 bg-zinc-50 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400"
+                        aria-label="Search radius"
+                      >
+                        <option value={1}>1 km</option>
+                        <option value={2}>2 km</option>
+                        <option value={5}>5 km</option>
+                        <option value={10}>10 km</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={handleAreaSearch}
+                        disabled={areaLoading || areaQuery.trim().length < 3}
+                        className={btnSecondary}
+                      >
+                        {areaLoading ? "Searching..." : "Search"}
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleAreaSearch}
-                      disabled={areaLoading || areaQuery.trim().length < 3}
-                      className={btnSecondary}
-                    >
-                      {areaLoading ? "Searching..." : "Search"}
-                    </button>
+                    {/* Suggestion chips */}
+                    <div className="flex flex-wrap gap-2">
+                      {["Salthill", "Galway City Centre", "Dublin 2", "Cork City", "Limerick City"].map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          onClick={() => {
+                            setAreaQuery(suggestion);
+                            setAreaResults([]);
+                            setAreaError(null);
+                          }}
+                          className="px-3 py-1.5 rounded-full text-xs font-medium bg-zinc-100 text-zinc-600 hover:bg-teal-50 hover:text-teal-700 hover:ring-1 hover:ring-teal-200 transition-all"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -756,40 +840,47 @@ export default function ComparableForm({
 
             {searchMode === "area" && areaResults.length > 0 && (
               <div className="mt-1.5 border border-zinc-200 rounded-xl overflow-hidden bg-white">
-                <div className="px-4 py-2.5 border-b border-zinc-100 bg-zinc-50">
+                <div className="px-4 py-2.5 border-b border-zinc-100 bg-zinc-50 flex items-center justify-between">
                   <p className="text-xs font-medium text-zinc-700">
-                    {areaResults.length} recent sales near{" "}
-                    {areaQuery} — click to use as comparable
+                    {areaResults.length} sales within {areaRadiusKm}km of {areaQuery}
                   </p>
+                  <span className="text-xs text-zinc-400">click to add as comparable</span>
                 </div>
-                <ul className="divide-y divide-zinc-50 max-h-80 overflow-y-auto">
+                <ul className="divide-y divide-zinc-100 max-h-80 overflow-y-auto">
                   {areaResults.map((r) => (
                     <li key={r.id}>
                       <button
                         type="button"
                         onClick={() => applyAreaResult(r)}
-                        className="w-full text-left px-4 py-3 hover:bg-zinc-50 transition-colors"
+                        className="w-full text-left px-4 py-3 hover:bg-zinc-50 transition-colors group"
                       >
                         <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-zinc-900 truncate">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-zinc-900 truncate group-hover:text-teal-700 transition-colors">
                               {r.address}
                             </p>
-                            <p className="text-xs text-zinc-500 mt-0.5">
-                              {r.county}
-                              {r.description ? " · " + r.description : ""}
-                              {" · "}
-                              <span className="text-zinc-400">
-                                {r.distance_km.toFixed(2)}km away
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              {r.description && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-zinc-100 text-zinc-600">
+                                  {r.description}
+                                </span>
+                              )}
+                              <span className="text-xs text-zinc-400">
+                                {r.distance_km < 1
+                                  ? `${Math.round(r.distance_km * 1000)}m away`
+                                  : `${r.distance_km.toFixed(1)}km away`}
                               </span>
-                            </p>
+                              {r.county && (
+                                <span className="text-xs text-zinc-400">{r.county}</span>
+                              )}
+                            </div>
                           </div>
                           <div className="text-right shrink-0">
-                            <p className="text-sm font-semibold text-zinc-900 tabular-nums">
+                            <p className="text-base font-bold text-zinc-900 tabular-nums">
                               €{Number(r.price).toLocaleString("en-IE")}
                             </p>
-                            <p className="text-xs text-zinc-500 tabular-nums">
-                              {new Date(r.sale_date).toLocaleDateString("en-IE", {
+                            <p className="text-xs text-zinc-500 tabular-nums mt-0.5">
+                              {new Date(r.sale_date + "T00:00:00").toLocaleDateString("en-IE", {
                                 day: "numeric",
                                 month: "short",
                                 year: "numeric",
@@ -883,6 +974,7 @@ export default function ComparableForm({
               step="0.01"
               min="0.01"
               value={area}
+              placeholder={pprUsed ? "Not in PPR — enter manually" : ""}
               onChange={(e) => {
                 setArea(e.target.value);
                 if (errors.length > 0) setErrors([]);
@@ -919,6 +1011,50 @@ export default function ComparableForm({
               <p className="mt-1 text-xs text-amber-700">
                 Rate appears unusually high — check inputs
               </p>
+            )}
+          </div>
+        )}
+
+        {/* Suggested Comparables */}
+        {(suggestLoading || suggestedComps.length > 0) && (
+          <div className="border border-zinc-100 rounded-xl bg-zinc-50/60 overflow-hidden">
+            <div className="px-4 py-2.5 flex items-center gap-2 border-b border-zinc-100">
+              {suggestLoading ? (
+                <>
+                  <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600 shrink-0" />
+                  <p className="text-xs font-medium text-zinc-500">Finding nearby sales…</p>
+                </>
+              ) : (
+                <p className="text-xs font-semibold text-zinc-700">
+                  Nearby Sales — you may also want to add these
+                </p>
+              )}
+            </div>
+            {suggestedComps.length > 0 && (
+              <ul className="divide-y divide-zinc-100">
+                {suggestedComps.map((r) => (
+                  <li key={r.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-zinc-800 truncate">{r.address}</p>
+                      <p className="text-xs text-zinc-400 mt-0.5 tabular-nums">
+                        €{Number(r.price).toLocaleString("en-IE")} &middot;{" "}
+                        {new Date(r.sale_date + "T00:00:00").toLocaleDateString("en-IE", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => applySuggestion(r)}
+                      className="shrink-0 text-xs font-medium px-2.5 py-1 rounded-lg bg-white border border-zinc-200 text-zinc-700 hover:bg-teal-50 hover:border-teal-300 hover:text-teal-700 transition-colors"
+                    >
+                      Add
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         )}

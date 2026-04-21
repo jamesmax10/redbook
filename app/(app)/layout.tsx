@@ -55,7 +55,7 @@ export default function AppLayout({
 
       {/* Main content */}
       <main className="ml-52 mt-12 min-h-screen">
-        <div className="max-w-3xl mx-auto px-8 py-8">
+        <div className="max-w-6xl mx-auto px-8 py-8">
           {children}
         </div>
       </main>
