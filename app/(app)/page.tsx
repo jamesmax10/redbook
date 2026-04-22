@@ -73,45 +73,36 @@ function parseStatusFilter(
   return FILTERABLE_STATUSES.includes(v as CaseStatus) ? (v as CaseStatus) : null;
 }
 
-function StepProgressDots({ completedSteps }: { completedSteps: Set<number> }) {
-  const total = 5;
-  const done = completedSteps.size;
-  return (
-    <div
-      className="flex items-center gap-1.5"
-      role="img"
-      aria-label={`${done} of ${total} workflow steps complete`}
-    >
-      {[1, 2, 3, 4, 5].map((n) => (
-        <span
-          key={n}
-          className={`size-2 shrink-0 rounded-full ${
-            completedSteps.has(n)
-              ? "bg-emerald-500"
-              : "bg-zinc-100 ring-1 ring-zinc-300/80"
-          }`}
-        />
-      ))}
-    </div>
-  );
+function fmtShortDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return "";
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-IE", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
-function getActionPrompt(completedSteps: Set<number>): string {
-  if (!completedSteps.has(2)) return "Add subject property";
-  if (!completedSteps.has(3)) return "Add comparables";
-  if (!completedSteps.has(4)) return "Set adopted rate";
-  if (completedSteps.size === 5) return "Report ready to export";
-  return "Continue workflow";
-}
-
-const SECTION_CONFIG: {
-  key: "incomplete" | "in_progress" | "ready";
+interface NextAction {
   label: string;
-}[] = [
-  { key: "incomplete", label: "NEEDS ATTENTION" },
-  { key: "in_progress", label: "IN PROGRESS" },
-  { key: "ready", label: "READY" },
-];
+  href: string;
+  completedCount: number;
+  done: boolean;
+}
+
+function getNextAction(caseId: string, completedSteps: Set<number>): NextAction {
+  const completedCount = [1, 2, 3, 4].filter((n) => completedSteps.has(n)).length;
+  if (!completedSteps.has(1)) return { label: "Add details", href: `/cases/${caseId}/overview`, completedCount, done: false };
+  if (!completedSteps.has(2)) return { label: "Add property", href: `/cases/${caseId}/overview`, completedCount, done: false };
+  if (!completedSteps.has(3)) return { label: "Add comparables", href: `/cases/${caseId}/evidence`, completedCount, done: false };
+  if (!completedSteps.has(4)) return { label: "Set valuation", href: `/cases/${caseId}/analysis`, completedCount, done: false };
+  return { label: "Review draft", href: `/cases/${caseId}/report`, completedCount, done: true };
+}
+
+const STATUS_DOT: Record<CaseStatus, string> = {
+  incomplete: "bg-amber-400",
+  in_progress: "bg-blue-400",
+  ready: "bg-emerald-400",
+};
 
 // ---------------------------------------------------------------------------
 // Page
@@ -181,25 +172,14 @@ export default async function DashboardPage({
   };
 
   return (
-    <div className="relative">
-      {/* Watermark */}
-      <div className="fixed bottom-8 right-8 pointer-events-none select-none z-0">
-        <img
-          src="/logo.png"
-          alt=""
-          className="w-64 opacity-[0.04] grayscale"
-        />
-      </div>
-
-      <div className="relative z-10">
+    <div className="px-8 py-8 max-w-7xl mx-auto">
       {/* Top bar */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-900 tracking-tight">
+          <h1 className="text-xl font-semibold text-zinc-900 tracking-tight">
             {firstName}&apos;s Valuations
           </h1>
           <p className="text-sm text-zinc-400 mt-0.5">
-            {counts.total} cases ·{" "}
             {new Date().toLocaleDateString("en-IE", {
               weekday: "long",
               day: "numeric",
@@ -208,7 +188,7 @@ export default async function DashboardPage({
           </p>
         </div>
         <Link href="/cases/new" className={btnPrimary}>
-          New Valuation
+          + New Case
         </Link>
       </div>
 
@@ -220,35 +200,28 @@ export default async function DashboardPage({
 
       {/* Metric strip */}
       {counts.total > 0 && (
-        <div className="grid grid-cols-4 gap-4 mb-8">
-          <Link
-            href="/"
-            className={`bg-white border border-zinc-200 rounded-xl px-5 py-4 hover:border-zinc-300 hover:shadow-sm transition-all ${activeFilter === null ? "ring-2 ring-zinc-900/10" : "opacity-80 hover:opacity-100"}`}
-          >
-            <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1">Total</p>
-            <p className="text-3xl font-semibold text-zinc-900 tabular-nums">{counts.total}</p>
-          </Link>
-          <Link
-            href={activeFilter === "ready" ? "/" : "/?status=ready"}
-            className={`bg-white border border-zinc-200 rounded-xl px-5 py-4 hover:border-zinc-300 hover:shadow-sm transition-all ${activeFilter === "ready" ? "ring-2 ring-emerald-500/20" : "opacity-80 hover:opacity-100"}`}
-          >
-            <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1">Ready</p>
-            <p className="text-3xl font-semibold text-emerald-600 tabular-nums">{counts.ready}</p>
-          </Link>
-          <Link
-            href={activeFilter === "in_progress" ? "/" : "/?status=in_progress"}
-            className={`bg-white border border-zinc-200 rounded-xl px-5 py-4 hover:border-zinc-300 hover:shadow-sm transition-all ${activeFilter === "in_progress" ? "ring-2 ring-blue-500/20" : "opacity-80 hover:opacity-100"}`}
-          >
-            <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1">In Progress</p>
-            <p className="text-3xl font-semibold text-blue-600 tabular-nums">{counts.in_progress}</p>
-          </Link>
-          <Link
-            href={activeFilter === "incomplete" ? "/" : "/?status=incomplete"}
-            className={`bg-white border border-zinc-200 rounded-xl px-5 py-4 hover:border-zinc-300 hover:shadow-sm transition-all ${activeFilter === "incomplete" ? "ring-2 ring-amber-500/20" : "opacity-80 hover:opacity-100"}`}
-          >
-            <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1">Incomplete</p>
-            <p className="text-3xl font-semibold text-amber-600 tabular-nums">{counts.incomplete}</p>
-          </Link>
+        <div className="flex items-center gap-1 mb-6 bg-white border border-zinc-200 rounded-xl px-1 py-1 w-fit">
+          {[
+            { href: "/", label: "All", count: counts.total, active: activeFilter === null },
+            { href: activeFilter === "ready" ? "/" : "/?status=ready", label: "Ready", count: counts.ready, active: activeFilter === "ready" },
+            { href: activeFilter === "in_progress" ? "/" : "/?status=in_progress", label: "In Progress", count: counts.in_progress, active: activeFilter === "in_progress" },
+            { href: activeFilter === "incomplete" ? "/" : "/?status=incomplete", label: "Incomplete", count: counts.incomplete, active: activeFilter === "incomplete" },
+          ].map(({ href, label, count, active }) => (
+            <Link
+              key={label}
+              href={href}
+              className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                active
+                  ? "bg-zinc-900 text-white"
+                  : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50"
+              }`}
+            >
+              {label}
+              <span className={`text-xs tabular-nums ${active ? "text-zinc-300" : "text-zinc-400"}`}>
+                {count}
+              </span>
+            </Link>
+          ))}
         </div>
       )}
 
@@ -263,83 +236,104 @@ export default async function DashboardPage({
 
       {cases.length > 0 && filteredCases.length === 0 && (
         <div className="bg-white border border-dashed border-zinc-300 rounded-xl text-center py-12 px-6">
-          <p className="text-zinc-500 text-sm mb-3">
-            No cases match this filter.
-          </p>
-          <Link
-            href="/"
-            className="text-sm font-medium text-zinc-900 hover:text-zinc-600 underline underline-offset-2"
-          >
-            Show all cases
+          <p className="text-zinc-500 text-sm mb-3">No cases match this filter.</p>
+          <Link href="/" className="text-sm font-medium text-zinc-900 hover:text-zinc-600 underline underline-offset-2">
+            Show all
           </Link>
         </div>
       )}
 
       {cases.length > 0 && filteredCases.length > 0 && (
-        <div>
-          {SECTION_CONFIG.map(({ key, label }, sectionIdx) => {
-            const group = grouped[key];
-            if (group.length === 0) return null;
-            return (
-              <div key={key}>
-                <div className={`flex items-center gap-3 mb-3 ${sectionIdx > 0 ? "mt-6" : ""}`}>
-                  <span className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">
-                    {label}
-                  </span>
-                  <div className="flex-1 h-px bg-zinc-200" />
-                  <span className="text-xs text-zinc-400">{group.length}</span>
-                </div>
-                <div>
-                  {group.map((c) => {
-                    const badge = STATUS_BADGE[c.status];
-                    const actionPrompt = getActionPrompt(c.completedSteps);
-                    return (
-                      <Link
-                        key={c.id}
-                        href={`/cases/${c.id}`}
-                        className="block group"
-                      >
-                        <div
-                          className={`bg-white border border-zinc-200 rounded-xl px-5 py-4 mb-2 hover:border-zinc-300 hover:shadow-sm transition-all ${
-                            c.status === "ready"
-                              ? "border-l-4 border-l-emerald-400"
-                              : c.status === "in_progress"
-                              ? "border-l-4 border-l-blue-400"
-                              : "border-l-4 border-l-amber-400"
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="min-w-0">
-                              <p className="font-semibold text-zinc-900 text-[15px] group-hover:text-zinc-700 transition-colors truncate">
-                                {c.client_name}
-                              </p>
-                              <p className="text-sm text-zinc-500 mt-0.5 truncate">
-                                {c.property_address}
-                              </p>
-                            </div>
-                            <span
-                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 ${badge.className}`}
-                            >
-                              {badge.label}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 mt-3">
-                            <StepProgressDots completedSteps={c.completedSteps} />
-                            <span className="text-xs text-zinc-400">
-                              {actionPrompt}
-                            </span>
-                          </div>
-                        </div>
+        <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-zinc-100">
+                <th className="text-left px-5 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wider">Client</th>
+                <th className="text-left px-5 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wider">Address</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wider hidden md:table-cell">Purpose</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wider hidden lg:table-cell">Date</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wider">Status</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wider">Next Action</th>
+                <th className="px-4 py-3 w-8" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-50">
+              {filteredCases.map((c) => {
+                const badge = STATUS_BADGE[c.status];
+                const dot = STATUS_DOT[c.status];
+                const nextAction = getNextAction(c.id, c.completedSteps);
+                return (
+                  <tr key={c.id} className="hover:bg-zinc-50/60 transition-colors group cursor-pointer">
+                    <td className="px-5 py-3.5">
+                      <Link href={`/cases/${c.id}/overview`} className="flex items-center gap-2.5 min-w-0">
+                        <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
+                        <span className="font-medium text-zinc-900 truncate group-hover:text-zinc-700 transition-colors">
+                          {c.client_name}
+                        </span>
                       </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <Link href={`/cases/${c.id}/overview`} className="block text-zinc-500 truncate max-w-[220px]">
+                        {c.property_address}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3.5 hidden md:table-cell">
+                      <Link href={`/cases/${c.id}/overview`} className="block">
+                        {c.purpose ? (
+                          <span className="text-xs text-zinc-500 bg-zinc-50 border border-zinc-100 px-2 py-0.5 rounded-md">
+                            {c.purpose}
+                          </span>
+                        ) : (
+                          <span className="text-zinc-300">—</span>
+                        )}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3.5 hidden lg:table-cell">
+                      <Link href={`/cases/${c.id}/overview`} className="block text-zinc-400 tabular-nums text-xs">
+                        {c.valuation_date ? fmtShortDate(c.valuation_date) : "—"}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <Link href={`/cases/${c.id}/overview`} className="block">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.className}`}>
+                          {badge.label}
+                        </span>
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <Link href={nextAction.href} className="block">
+                        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                          nextAction.done
+                            ? "bg-zinc-50 text-zinc-500 border border-zinc-200 group-hover:border-zinc-300 group-hover:text-zinc-700"
+                            : "bg-zinc-900 text-white group-hover:bg-zinc-700"
+                        }`}>
+                          {nextAction.label}
+                        </span>
+                        {!nextAction.done && (
+                          <span className="mt-1 block text-[11px] text-zinc-400 tabular-nums">
+                            {nextAction.completedCount} of 4 complete
+                          </span>
+                        )}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3.5 text-right">
+                      <Link
+                        href={`/cases/${c.id}/overview`}
+                        className="text-zinc-300 group-hover:text-zinc-500 transition-colors"
+                        aria-label="Open case"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="9 18 15 12 9 6" />
+                        </svg>
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
-      </div>
     </div>
   );
 }

@@ -137,6 +137,27 @@ async function pprAreaFetch(
   return json as { results: PprAreaResult[]; area: string };
 }
 
+function scoreComparable(comp: PprAreaResult, referenceDate: Date): number {
+  let score = 0;
+
+  const saleDate = new Date(comp.sale_date + "T00:00:00");
+  const monthsDiff =
+    (referenceDate.getTime() - saleDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
+
+  if (monthsDiff <= 6) score += 60;
+  else if (monthsDiff <= 12) score += 45;
+  else if (monthsDiff <= 24) score += 30;
+  else if (monthsDiff <= 36) score += 15;
+
+  const km = comp.distance_km;
+  if (km < 0.5) score += 40;
+  else if (km < 1) score += 30;
+  else if (km < 2) score += 20;
+  else if (km < 5) score += 10;
+
+  return score;
+}
+
 export interface ExistingComparable {
   address: string;
   price_or_rent: number;
@@ -201,6 +222,10 @@ export default function ComparableForm({
   const [areaName, setAreaName] = useState<string | null>(null);
   const [suggestedComps, setSuggestedComps] = useState<PprAreaResult[]>([]);
   const [suggestLoading, setSuggestLoading] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterMinPrice, setFilterMinPrice] = useState("");
+  const [filterMaxPrice, setFilterMaxPrice] = useState("");
+  const [filterDateMonths, setFilterDateMonths] = useState("");
   const skipDuplicateCheck = useRef(false);
   const skipPprSearch = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -410,10 +435,14 @@ export default function ComparableForm({
     pprAreaFetch(geocodeQuery, areaRadiusKm)
       .then((data) => {
         const verifiedAddr = result.address.trim().toLowerCase();
-        const filtered = data.results
+        const now = new Date();
+        const ranked = data.results
           .filter((r) => r.address.trim().toLowerCase() !== verifiedAddr)
-          .slice(0, 6);
-        setSuggestedComps(filtered);
+          .map((r) => ({ r, score: scoreComparable(r, now) }))
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 6)
+          .map(({ r }) => r);
+        setSuggestedComps(ranked);
       })
       .catch(() => {})
       .finally(() => setSuggestLoading(false));
@@ -432,6 +461,29 @@ export default function ComparableForm({
     setPprResults([]);
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
+
+  const activeFilterCount =
+    (filterMinPrice ? 1 : 0) +
+    (filterMaxPrice ? 1 : 0) +
+    (filterDateMonths ? 1 : 0);
+
+  const filteredAreaResults = areaResults.filter((r) => {
+    if (filterMinPrice) {
+      const min = parseFloat(filterMinPrice);
+      if (!isNaN(min) && r.price < min) return false;
+    }
+    if (filterMaxPrice) {
+      const max = parseFloat(filterMaxPrice);
+      if (!isNaN(max) && r.price > max) return false;
+    }
+    if (filterDateMonths) {
+      const months = parseInt(filterDateMonths, 10);
+      const cutoff = new Date();
+      cutoff.setMonth(cutoff.getMonth() - months);
+      if (new Date(r.sale_date + "T00:00:00") < cutoff) return false;
+    }
+    return true;
+  });
 
   const price = parseFloat(priceOrRent);
   const areaVal = parseFloat(area);
@@ -725,6 +777,98 @@ export default function ComparableForm({
                         </button>
                       ))}
                     </div>
+                    {/* Filters */}
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setFilterOpen((v) => !v)}
+                        className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-700 transition-colors"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                        </svg>
+                        <span>Filters</span>
+                        {activeFilterCount > 0 && (
+                          <span className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-700">
+                            {activeFilterCount} active
+                          </span>
+                        )}
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className={`transition-transform ${filterOpen ? "rotate-180" : ""}`}
+                        >
+                          <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                      </button>
+                      {filterOpen && (
+                        <div className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+                          <div className="flex items-end gap-3 flex-wrap">
+                            <div>
+                              <label className={formLabel}>Min Price</label>
+                              <div className="relative">
+                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 text-sm pointer-events-none">€</span>
+                                <input
+                                  type="number"
+                                  value={filterMinPrice}
+                                  onChange={(e) => setFilterMinPrice(e.target.value)}
+                                  placeholder="0"
+                                  min="0"
+                                  className={inputClass + " pl-6 w-32"}
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className={formLabel}>Max Price</label>
+                              <div className="relative">
+                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 text-sm pointer-events-none">€</span>
+                                <input
+                                  type="number"
+                                  value={filterMaxPrice}
+                                  onChange={(e) => setFilterMaxPrice(e.target.value)}
+                                  placeholder="Any"
+                                  min="0"
+                                  className={inputClass + " pl-6 w-32"}
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className={formLabel}>Date Sold</label>
+                              <select
+                                value={filterDateMonths}
+                                onChange={(e) => setFilterDateMonths(e.target.value)}
+                                className={inputClass}
+                              >
+                                <option value="">Any time</option>
+                                <option value="12">Last 12 months</option>
+                                <option value="24">Last 2 years</option>
+                                <option value="36">Last 3 years</option>
+                                <option value="60">Last 5 years</option>
+                              </select>
+                            </div>
+                            {activeFilterCount > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFilterMinPrice("");
+                                  setFilterMaxPrice("");
+                                  setFilterDateMonths("");
+                                }}
+                                className="text-xs text-zinc-400 hover:text-zinc-600 underline pb-2"
+                              >
+                                Clear filters
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -842,12 +986,19 @@ export default function ComparableForm({
               <div className="mt-1.5 border border-zinc-200 rounded-xl overflow-hidden bg-white">
                 <div className="px-4 py-2.5 border-b border-zinc-100 bg-zinc-50 flex items-center justify-between">
                   <p className="text-xs font-medium text-zinc-700">
-                    {areaResults.length} sales within {areaRadiusKm}km of {areaQuery}
+                    {activeFilterCount > 0
+                      ? `${filteredAreaResults.length} of ${areaResults.length} sales within ${areaRadiusKm}km of ${areaName ?? areaQuery}`
+                      : `${areaResults.length} sales within ${areaRadiusKm}km of ${areaName ?? areaQuery}`}
                   </p>
                   <span className="text-xs text-zinc-400">click to add as comparable</span>
                 </div>
+                {filteredAreaResults.length === 0 ? (
+                  <p className="text-xs text-zinc-400 text-center py-6 px-4">
+                    No results match your filters — try adjusting the price range or date
+                  </p>
+                ) : (
                 <ul className="divide-y divide-zinc-100 max-h-80 overflow-y-auto">
-                  {areaResults.map((r) => (
+                  {filteredAreaResults.map((r) => (
                     <li key={r.id}>
                       <button
                         type="button"
@@ -892,6 +1043,7 @@ export default function ComparableForm({
                     </li>
                   ))}
                 </ul>
+                )}
               </div>
             )}
         </div>
@@ -1030,32 +1182,48 @@ export default function ComparableForm({
                 </p>
               )}
             </div>
-            {suggestedComps.length > 0 && (
-              <ul className="divide-y divide-zinc-100">
-                {suggestedComps.map((r) => (
-                  <li key={r.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-zinc-800 truncate">{r.address}</p>
-                      <p className="text-xs text-zinc-400 mt-0.5 tabular-nums">
-                        €{Number(r.price).toLocaleString("en-IE")} &middot;{" "}
-                        {new Date(r.sale_date + "T00:00:00").toLocaleDateString("en-IE", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => applySuggestion(r)}
-                      className="shrink-0 text-xs font-medium px-2.5 py-1 rounded-lg bg-white border border-zinc-200 text-zinc-700 hover:bg-teal-50 hover:border-teal-300 hover:text-teal-700 transition-colors"
-                    >
-                      Add
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+            {suggestedComps.length > 0 && (() => {
+              const topScore = scoreComparable(suggestedComps[0], new Date());
+              const topBadge =
+                topScore >= 80
+                  ? { label: "Best match", cls: "bg-emerald-50 text-emerald-700 ring-emerald-600/20" }
+                  : topScore >= 50
+                  ? { label: "Good match", cls: "bg-teal-50 text-teal-700 ring-teal-600/20" }
+                  : null;
+              return (
+                <ul className="divide-y divide-zinc-100">
+                  {suggestedComps.map((r, index) => (
+                    <li key={r.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-zinc-800 truncate">{r.address}</p>
+                          {index === 0 && topBadge && (
+                            <span className={`shrink-0 text-xs font-medium ring-1 rounded-full px-2 py-0.5 ${topBadge.cls}`}>
+                              {topBadge.label}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-zinc-400 mt-0.5 tabular-nums">
+                          €{Number(r.price).toLocaleString("en-IE")} &middot;{" "}
+                          {new Date(r.sale_date + "T00:00:00").toLocaleDateString("en-IE", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => applySuggestion(r)}
+                        className="shrink-0 text-xs font-medium px-2.5 py-1 rounded-lg bg-white border border-zinc-200 text-zinc-700 hover:bg-teal-50 hover:border-teal-300 hover:text-teal-700 transition-colors"
+                      >
+                        Add
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              );
+            })()}
           </div>
         )}
 

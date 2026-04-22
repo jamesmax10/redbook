@@ -80,3 +80,12 @@ export const alertWarning =
 
 export const alertError =
   "rounded-xl px-5 py-4 flex items-center gap-3 bg-red-50";
+
+// ---------------------------------------------------------------------------
+// Meta
+// ---------------------------------------------------------------------------
+export const metaChip =
+  "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-zinc-100 text-zinc-600";
+
+export const sectionDivider =
+  "flex items-center gap-3 mb-3";

@@ -61,7 +61,7 @@ export function runValidation(
           section: "case",
           severity: "error",
           message: "Client name is missing",
-          fixHref: `/cases/${caseId}?step=1`,
+          fixHref: `/cases/${caseId}/overview`,
         }
   );
 
@@ -72,7 +72,7 @@ export function runValidation(
           section: "case",
           severity: "error",
           message: "Property address is missing",
-          fixHref: `/cases/${caseId}?step=1`,
+          fixHref: `/cases/${caseId}/overview`,
         }
   );
 
@@ -83,7 +83,7 @@ export function runValidation(
           section: "case",
           severity: "error",
           message: "Valuation date is missing",
-          fixHref: `/cases/${caseId}?step=1`,
+          fixHref: `/cases/${caseId}/overview`,
         }
   );
 
@@ -101,14 +101,14 @@ export function runValidation(
       section: "comparables",
       severity: "warning",
       message: "Only 1 comparable added — minimum 2 required",
-      fixHref: `/cases/${caseId}?step=3`,
+      fixHref: `/cases/${caseId}/evidence`,
     });
   } else {
     checks.push({
       section: "comparables",
       severity: "error",
       message: "No comparables added yet",
-      fixHref: `/cases/${caseId}?step=3`,
+      fixHref: `/cases/${caseId}/evidence`,
     });
   }
 
@@ -121,7 +121,7 @@ export function runValidation(
           section: "valuation",
           severity: "error",
           message: "Adopted rate is missing",
-          fixHref: `/cases/${caseId}?step=4`,
+          fixHref: `/cases/${caseId}/analysis`,
         }
   );
 
@@ -133,7 +133,7 @@ export function runValidation(
       section: "valuation",
       severity: "error",
       message: "Adopted rate rationale is missing",
-      fixHref: `/cases/${caseId}?step=4`,
+      fixHref: `/cases/${caseId}/analysis`,
     });
   } else if (rationaleScore < 3) {
     checks.push({
@@ -141,7 +141,7 @@ export function runValidation(
       severity: "warning",
       message:
         "Rationale may be insufficient — reference comparables, adjustments, and adopted rate",
-      fixHref: `/cases/${caseId}?step=4`,
+      fixHref: `/cases/${caseId}/analysis`,
     });
   } else {
     checks.push({
@@ -158,7 +158,7 @@ export function runValidation(
           section: "valuation",
           severity: "warning",
           message: "Assumptions not provided",
-          fixHref: `/cases/${caseId}?step=4`,
+          fixHref: `/cases/${caseId}/analysis`,
         }
   );
 
@@ -173,7 +173,7 @@ export function runValidation(
           section: "valuation",
           severity: "warning",
           message: "Limiting conditions not provided",
-          fixHref: `/cases/${caseId}?step=4`,
+          fixHref: `/cases/${caseId}/analysis`,
         }
   );
 
@@ -184,7 +184,7 @@ export function runValidation(
           section: "valuation",
           severity: "warning",
           message: "Valuer name not provided",
-          fixHref: `/cases/${caseId}?step=4`,
+          fixHref: `/cases/${caseId}/analysis`,
         }
   );
 

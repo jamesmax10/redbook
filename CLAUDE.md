@@ -1,162 +1,184 @@
-@AGENTS.md
-# RedBook Pro — Claude Instructions
+# RedBook Pro – Master Instructions
 
-## Product Overview
+## Product
 
-RedBook Pro is a structured valuation workflow platform for Irish commercial property (RICS Red Book aligned).
-
-The goal is to help chartered surveyors complete valuations more efficiently and with greater confidence.
-
-This is NOT:
-- a chatbot
-- a generic AI tool
-- a report generator
-
-This IS:
-- a structured decision system
-- a professional workflow tool
-- a valuation workflow platform
+* RedBook Pro is a structured valuation workspace for Irish residential property.
+* Core workflow: Case → Evidence → Analysis → Draft Report → Validation Agent → Export.
+* Workflow-first, not AI-first.
+* Structured data over unstructured text.
+* Do not suggest random features.
 
 ---
 
-## Core Workflow
+## Core Product Direction
 
-Create case → Add comparables → Analyse → Validate → Generate report → Export
-
-Every feature must support this workflow.
-
----
-
-## Current Product State
-
-The core workflow is fully implemented:
-
-- Case management
-- Subject property input
-- Comparable analysis
-- Adjustment system
-- Valuation calculation
-- Validation system
-- Report generation
-- DOCX export
-- Step-based workflow UI
-
-The product is functional.
-
-We are now focused on improving usability and reducing friction.
+* This must feel like a professional valuation workspace.
+* NOT an admin tool, NOT a CRUD app, NOT a form wizard.
+* Preserve business logic and server actions.
+* UI structure is allowed to be completely replaced if weak.
 
 ---
 
-## Current Priorities
+## UX Principles
 
-1. Comparable capture (highest priority)
-   - reduce manual entry
-   - enable paste → auto-fill workflow
-
-2. Workflow UX refinement
-3. Reliability and consistency
-4. Real user validation
-
----
-
-## Core Principle
-
-> Does this reduce friction in the valuation workflow?
-
-If not, do not build it.
+* Data-first, NOT form-first
+* No multi-step wizard flows
+* No hidden context between steps
+* Tables for structured data (comparables)
+* Drawers/modals for editing (not full-page forms)
+* Persistent workspace (no page resets)
+* Always-visible context where needed
 
 ---
 
-## Implementation Rules
+## Case Architecture
 
-When implementing features:
+* Global sidebar: minimal (All Cases, New Case only)
+* Case navigation: horizontal tab strip inside workspace
 
-- Keep changes minimal and focused
-- Do not refactor unrelated parts of the codebase
-- Follow existing patterns in the repo
-- Avoid introducing unnecessary abstractions
-- Prefer simple solutions over complex ones
+Tabs:
 
----
-
-## Code Structure Rules
-
-- Keep business logic separate from UI where practical
-- Use shared helper functions for:
-  - valuation calculations
-  - adjustment logic
-  - status determination
-- Do not duplicate logic across multiple files
-- Keep data structures consistent
+* Overview
+* Evidence
+* Analysis
+* Draft Report
 
 ---
 
-## Validation & Data Rules
+## Tab Intent
 
-- Always validate critical inputs server-side
-- Prevent invalid states (e.g. division by zero)
-- Ensure calculations are deterministic and explainable
+### Overview
 
----
+* Summary + readiness + next actions
+* NOT a full edit form
+* Editing via inline, modal, or drawer
 
-## Agent-Readiness Rules
+### Evidence (Comparables)
 
-The system must remain fully usable without AI.
+* Primary product surface
+* Must be a data workspace
+* Table is dominant
+* Adjustments visible by default
+* Adjusted rate visually dominant
+* Add/edit via drawer (not inline form)
 
-Future AI should assist, not replace the workflow.
+### Analysis
 
-- Prefer structured data over free text
-- Keep workflow steps explicit
-- Keep report sections modular
-- Avoid embedding logic only in UI components
+* Decision workspace (rate, rationale, assumptions)
+* Must not feel like a generic form
 
-Do NOT:
-- add chat interfaces
-- build autonomous agents
-- introduce black-box logic
+### Draft Report
 
----
-
-## Code Review Mode
-
-When reviewing code:
-
-1. Identify what works well
-2. Identify risks or weaknesses
-3. Separate:
-   - fix now
-   - fix later
-4. Suggest only high-impact improvements
-5. Avoid over-engineering
+* Live document preview
+* Reflects current data
+* No editing here
 
 ---
 
-## Bug Fix Mode
+## Validation Agent
 
-When fixing bugs:
+* Must be clearly separate from Draft Report
+* Button label must be: "Run Validation Agent"
+* States:
 
-- Identify root cause first
-- Do not patch blindly
-- Keep fixes minimal and safe
-- Do not introduce new complexity
-
----
-
-## Feature Implementation Mode
-
-When building features:
-
-- Focus on improving workflow efficiency
-- Do not add features that are not directly useful
-- Keep UX simple and clear
-- Ensure consistency with existing workflow
+  * Not run
+  * Passed
+  * Warnings
+  * Failed
 
 ---
 
-## Final Rule
+## UI Execution Standard (CRITICAL)
 
-This product is built for real professionals.
+### Visual Benchmark
 
-Every change should move the product closer to:
+Must feel like:
 
-> a fast, reliable, and defensible valuation workflow
+* Stripe
+* Linear
+* Notion
+
+If it looks like:
+
+* basic CRUD
+* internal admin tool
+* form-heavy interface
+
+→ it is incorrect
+
+---
+
+### Layout Rules
+
+* Workspace > Form
+* Data visible before inputs
+* Tables over cards for data-heavy views
+* No large persistent forms
+* Editing via drawer/modal/inline only
+
+---
+
+### Interaction Rules
+
+* No step-based UX
+* No context switching between screens
+* User must always understand:
+
+  * property
+  * evidence
+  * analysis
+
+---
+
+### Visual Hierarchy
+
+* Important numbers (€/m², adjusted rate) must stand out
+* Supporting data must be quieter
+* Use spacing + typography first, not color hacks
+
+---
+
+### Component Rules
+
+* Use shadcn/ui components
+* No custom raw UI if component exists
+* Tables, drawers, tabs, badges are primary tools
+* Avoid stacked cards for structured data
+
+---
+
+## Redesign Authority
+
+* You are allowed to:
+
+  * Replace entire layouts
+  * Break existing UI structure
+  * Recompose screens
+
+* You are NOT restricted to incremental improvements
+
+---
+
+## Process for UI Work
+
+Always follow this order:
+
+1. Critique current UI
+2. Explain why it feels weak/form-based
+3. Define a better layout
+4. Lock structure
+5. Implement (file-by-file if needed)
+6. Review result vs spec
+
+---
+
+## Failure Conditions
+
+If the result:
+
+* is form-heavy
+* hides important data
+* feels step-based
+* increases friction
+
+→ it is incorrect and must be redesigned
